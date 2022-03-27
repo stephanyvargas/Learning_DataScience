@@ -1,7 +1,0 @@
-#This is a notebook from the online class on machine learning
-
-#identity matrix
-A = eye(5)
-
-#Normal equation octave implementaion, minimum for theta
-pinv (X' * X) *X' *y
