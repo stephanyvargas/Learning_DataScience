@@ -4,4 +4,4 @@ This repository contains Jupyter notebooks implementing the some code samples fo
 
 These notebooks use TensorFlow 2.6.
 
-For more information visit the original work done by F. Chollet [Deep Learning with Python](https://colab.research.google.com/github/fchollet/deep-learning-with-python-notebooks/blob/master)
+For more information visit the original work done by F. Chollet in the github:[Deep Learning with Python](https://github.com/fchollet/deep-learning-with-python-notebooks)
