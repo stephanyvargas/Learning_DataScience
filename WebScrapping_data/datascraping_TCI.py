@@ -1,8 +1,10 @@
 import requests
+import re
 from bs4 import BeautifulSoup
 
+code = 'A0001'
 
-response = requests.get(f"https://www.tcichemicals.com/JP/en/p/{A0001}", headers = {"User-Agent"
+response = requests.get(f"https://www.tcichemicals.com/JP/en/p/A0001", headers = {"User-Agent":
                         "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0"})
 soup = BeautifulSoup(response.content, "html.parser")
 
@@ -21,11 +23,23 @@ info_dict['code'] = code
 
 
 #Get the amount of product avaliable for purchase and price
-size  = soup.find_all("td", attrs={"data-attr": "Size:"})
-price = soup.find_all("td", attrs={"data-attr": "Unit Price"})
+amount  = soup.find_all("td", attrs={"data-attr": "Size:"})
+price   = soup.find_all("td", attrs={"data-attr": "Unit Price"})
 
 for a, p in zip(amount, price):
     a = re.sub('\\[a-z]','', a.string).strip()
-    p = str(price[0]).split('¥')[-1].split('<')[0]
+    p = str(p).split('¥')[-1].split('<')[0]
     info_dict[a] = p
 
+
+#Get the properties of the product
+table = table = soup.find_all("td")
+
+for i, prop in enumerate(table):
+    if (prop.string is not None) and ('Melting point' in prop.string):
+        key = re.sub('\\[a-z].','', prop.string).strip()
+        value = re.sub('\\[a-z].','', table[i+1].string).strip()
+        info_dict[key] = value.replace("\n", "")
+
+
+print(info_dict)
