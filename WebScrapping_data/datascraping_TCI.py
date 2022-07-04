@@ -7,3 +7,11 @@ response = requests.get("https://www.tcichemicals.com/JP/en/p/A0001", headers = 
 
 soup = BeautifulSoup(response.content, "html.parser")
 
+
+title = soup.find("title").string.split('|')[0].strip()
+CAS = title.split(' ')[-1]
+name = title.strip(CAS).strip()
+
+
+size  = soup.find_all("td", attrs={"data-attr": "Size:"})
+price = soup.find_all("td", attrs={"data-attr": "Unit Price:"})
