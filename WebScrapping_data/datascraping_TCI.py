@@ -82,20 +82,31 @@ def colect_data(code, all_info={}):
 
 
             #Get the properties of the product
-            table = table = soup.find_all("td")
+            table = soup.find_all("td")
+            try:
+                val = False
+                for i, prop in enumerate(table):
+                    if (prop.string is not None):
+                        if prop.string == 'Product Number':
+                            val = True
+                        if val and i%2 == 0:
+                            try:
+                                key = re.sub('\\[a-z].','', prop.string).strip()
+                                value = re.sub('\\[a-z].','', table[i+1].string).strip()
+                                info_dict[key] = value.replace("\n", "")
+                            except TypeError:
+                                print('Error: ', str(prop))
+
+            except:
+                pass
+
+            #Extract Molecular Formula  and the Molecular Weight.
             try:
                 for i, prop in enumerate(table):
-                    if (prop.string is not None) and (('Melting point' in prop.string) or \
-                    ('Boiling point' in prop.string) or ('Purity / Analysis Method' in prop.string) or \
-                    ('PubChem Substance ID' in prop.string) or ('Merck Index (14)' in prop.string) or \
-                    ('Refractive Index' in prop.string) or ('Density' in prop.string) or \
-                    ('Solubility in water' in prop.string) or ('Flash point' in prop.string) or \
-                    ('Appearance' in prop.string) or ('Solubility (soluble in)' in prop.string) or \
-                    ('Poisonous and Deleterious Substances' in prop.string) or ('Maximum Absorption' in prop.string) ):
-
-                        key = re.sub('\\[a-z].','', prop.string).strip()
-                        value = re.sub('\\[a-z].','', table[i+1].string).strip()
-                        info_dict[key] = value.replace("\n", "")
+                    if (prop.string is not None) and ('Molecular Formula / Molecular Weight' in prop.string):
+                        temp = table[i+1].text.split('\n')
+                        info_dict['Molecular Formula'] = temp[0]
+                        info_dict['Molecular Weight'] = temp[2].replace('=', '').strip()
             except:
                 pass
 
@@ -126,6 +137,13 @@ def colect_data(code, all_info={}):
             except:
                 pass
 
+            #Get the shipment information
+            try:
+                ship = soup.find_all('div', class_='col-md-12 col-xs-12')
+                info_dict['Shipment Information'] = ship[0].text.replace('\t', '').split('\n')[1]
+            except:
+                pass
+
             all_info[code] = info_dict
 
         return all_info
@@ -133,8 +151,8 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = [chr(i) for i in range(65,91)]
-code_list = [str(s).zfill(4) for s in range(0,10000)]
+prefix_list = ['A']#[chr(i) for i in range(65,91)]
+code_list = ['0001','0002','0003']#[str(s).zfill(4) for s in range(0,10000)]
 
 
 #Since the data will be huge, save it as a JSON file
@@ -155,4 +173,4 @@ for prefix in prefix_list:
         time.sleep(3)
 
 df = pd.DataFrame(all_info.values(),index=all_info.keys())
-df.to_json('file.json', orient = 'split', compression = 'infer', index = 'true')
+df.to_json('data_TCI.json', orient = 'split', compression = 'infer', index = 'true')
