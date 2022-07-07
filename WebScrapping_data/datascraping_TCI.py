@@ -5,6 +5,7 @@ import pandas as pd
 import json
 from tqdm import tqdm
 from bs4 import BeautifulSoup
+import os
 
 code = 'A0001'
 
@@ -27,9 +28,10 @@ def colect_data(code, all_info={}):
         title = soup.find("title").string.split('|')[0].strip()
 
         #Check if the code exists
-        if "Page Not Found" in title:
+        if "Not Found" in title:
             all_info[code] = {'error':'noInfo'}
             print(":NoInfo")
+            return False
         else:
             print(':OK')
 
@@ -105,7 +107,7 @@ def colect_data(code, all_info={}):
                                 info_dict[key] = value.replace("\n", "")
                                 print(code,' odd i: key, value   ', key, value)
                             except TypeError:
-                                pass#print('Error: ', str(prop))
+                                print('Error: ', str(prop))
 
             except:
                 pass
@@ -127,6 +129,26 @@ def colect_data(code, all_info={}):
                     if (prop.string is not None) and ('Chemical Substance Law' in prop.string):
                         temp = table[i+1].text.split('\n')
                         info_dict['Chemical Substance Law_No']= re.sub('\\[a-z].','', temp[-2]).strip()
+            except:
+                pass
+
+
+            #Extract information for Packaging and container.
+            try:
+                for i, prop in enumerate(table):
+                    if (prop.string is not None) and ('Hazard Statements' in prop.string):
+                        temp = table[i+1].text.split('\n')
+                        info_dict['Hazard Statements']= re.sub('\\[a-z].','', temp[-2]).strip()
+            except:
+                pass
+
+
+            #Extract information for Packaging and container.
+            try:
+                for i, prop in enumerate(table):
+                    if (prop.string is not None) and ('Packaging' in prop.string):
+                        temp = table[i+1].text.split('\n')
+                        info_dict['Packaging and container']= re.sub('\\[a-z].','', temp[-2]).strip()
             except:
                 pass
 
@@ -163,7 +185,7 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = [chr(i) for i in range(65,91)]
+prefix_list = ['A']#[chr(i) for i in range(65,91)]
 code_list = [str(s).zfill(4) for s in range(0,10000)]
 
 
@@ -184,5 +206,20 @@ for prefix in prefix_list:
         #Leave a 3 second interval to avoid overloading the server (avoid being blacklisted!)
         time.sleep(3)
 
-df = pd.DataFrame(all_info.values(),index=all_info.keys())
-df.to_json('data_TCI.json', orient = 'split', compression = 'infer', index = 'true')
+        if all_info:
+            path = 'data_TCI.json'
+            try:
+                file_exists = os.path.isfile(path)
+                if file_exists:
+                    #open existing data
+                    df_initial = pd.read_json(path, orient ='split', compression = 'infer')
+                    df = pd.DataFrame(all_info.values(),index=all_info.keys())
+                    df_extended = df_initial.append(df)
+                    df_extended.to_json(path, orient = 'split', compression = 'infer', index = 'true')
+                else:
+                    df = pd.DataFrame(all_info.values(),index=all_info.keys())
+                    df.to_json(path, orient = 'split', compression = 'infer', index = 'true')
+            except:
+                print('Data for codes list {} could not be saved'.format(prefix))
+
+        all_info = {}
