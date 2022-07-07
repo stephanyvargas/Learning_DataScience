@@ -89,13 +89,23 @@ def colect_data(code, all_info={}):
                     if (prop.string is not None):
                         if prop.string == 'Product Number':
                             val = True
-                        if val and i%2 == 0:
+                            val_num = i
+                        if val and val_num%2 == 0 and i%2 == 0:
                             try:
                                 key = re.sub('\\[a-z].','', prop.string).strip()
                                 value = re.sub('\\[a-z].','', table[i+1].string).strip()
                                 info_dict[key] = value.replace("\n", "")
+                                print(code,' even i: key, value   ', key, value)
                             except TypeError:
                                 print('Error: ', str(prop))
+                        if val and val_num%2 != 0 and i%2 != 0:
+                            try:
+                                key = re.sub('\\[a-z].','', prop.string).strip()
+                                value = re.sub('\\[a-z].','', table[i+1].string).strip()
+                                info_dict[key] = value.replace("\n", "")
+                                print(code,' odd i: key, value   ', key, value)
+                            except TypeError:
+                                pass#print('Error: ', str(prop))
 
             except:
                 pass
@@ -140,7 +150,9 @@ def colect_data(code, all_info={}):
             #Get the shipment information
             try:
                 ship = soup.find_all('div', class_='col-md-12 col-xs-12')
-                info_dict['Shipment Information'] = ship[0].text.replace('\t', '').split('\n')[1]
+                shipment_info = ship[0].text.replace('\t', '').split('\n')[1]
+                info_dict['Shipment Information'] = shipment_info.replace('Available Stock: ', '')
+                print(info_dict['Shipment Information'])
             except:
                 pass
 
@@ -151,8 +163,8 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = ['A']#[chr(i) for i in range(65,91)]
-code_list = ['0001','0002','0003']#[str(s).zfill(4) for s in range(0,10000)]
+prefix_list = [chr(i) for i in range(65,91)]
+code_list = [str(s).zfill(4) for s in range(0,10000)]
 
 
 #Since the data will be huge, save it as a JSON file
