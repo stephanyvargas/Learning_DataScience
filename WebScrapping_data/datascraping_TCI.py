@@ -7,7 +7,6 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
 import os
 
-code = 'A0001'
 
 def colect_data(code, all_info={}):
     print(code,end=' ')
@@ -94,16 +93,16 @@ def colect_data(code, all_info={}):
                             val_num = i
                         if val and val_num%2 == 0 and i%2 == 0:
                             try:
-                                key = re.sub('\\[a-z].','', prop.string).strip()
-                                value = re.sub('\\[a-z].','', table[i+1].string).strip()
+                                key = re.sub('\\[a-z].','', prop.string).strip().lower()
+                                value = re.sub('\\[a-z].','', table[i+1].string).strip().lower()
                                 info_dict[key] = value.replace("\n", "")
                                 print(code,' even i: key, value   ', key, value)
                             except TypeError:
                                 print('Error: ', str(prop))
                         if val and val_num%2 != 0 and i%2 != 0:
                             try:
-                                key = re.sub('\\[a-z].','', prop.string).strip()
-                                value = re.sub('\\[a-z].','', table[i+1].string).strip()
+                                key = re.sub('\\[a-z].','', prop.string).strip().lower()
+                                value = re.sub('\\[a-z].','', table[i+1].string).strip().lower()
                                 info_dict[key] = value.replace("\n", "")
                                 print(code,' odd i: key, value   ', key, value)
                             except TypeError:
@@ -185,7 +184,7 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = ['A']#[chr(i) for i in range(65,91)]
+prefix_list = ['C']#[chr(i) for i in range(65,91)]
 code_list = [str(s).zfill(4) for s in range(0,10000)]
 
 
