@@ -38,10 +38,13 @@ def colect_data(code, all_info={}):
             try:
                 #Get the name, CAS and code
                 CAS = title.split(' ')[-1]
-                name = title.strip(CAS).strip()
-                info_dict['name'] = name
-                info_dict['CAS'] = CAS
-                info_dict['code'] = code
+                name = title.strip(CAS).strip()\
+                if name == 'Service Temporarily':
+                    return False
+                else:
+                    info_dict['name'] = name
+                    info_dict['CAS'] = CAS
+                    info_dict['code'] = code
             except:
                 pass
 
@@ -83,7 +86,7 @@ def colect_data(code, all_info={}):
 
 
             #Get the properties of the product
-            table = soup.find_all("td")
+            table = soup.find_all("td", class_=False)
             try:
                 val = False
                 for i, prop in enumerate(table):
@@ -182,19 +185,22 @@ def colect_data(code, all_info={}):
         return all_info
 
 
-
 #Generate all the possible combinations of codes（A0000〜Z9999）
 prefix_list = ['C']#[chr(i) for i in range(65,91)]
-code_list = [str(s).zfill(4) for s in range(0,10000)]
-
+code_list = [str(s).zfill(4) for s in range(8203,10000)]
 
 #Since the data will be huge, save it as a JSON file
-for prefix in prefix_list:
+for prefix in prefix_list: #in th entire next block use indent if this line is uncommented
 
+    #data = available_prods.read()
+    #data_into_list = data.split('\n')
+    #print(data_into_list)
     all_info = {}
 
     for code_ in tqdm(code_list):
         code = prefix + code_
+
+    #for code in tqdm(data_into_list[:-1]):
 
         try:
             all_info = colect_data(code, all_info)
