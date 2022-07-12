@@ -38,7 +38,7 @@ def colect_data(code, all_info={}):
             try:
                 #Get the name, CAS and code
                 CAS = title.split(' ')[-1]
-                name = title.strip(CAS).strip()\
+                name = title.strip(CAS).strip()
                 if name == 'Service Temporarily':
                     return False
                 else:
@@ -186,15 +186,12 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = ['C']#[chr(i) for i in range(65,91)]
-code_list = [str(s).zfill(4) for s in range(8203,10000)]
+prefix_list = ['I']#[chr(i) for i in range(65,91)]
+code_list = [str(s).zfill(4) for s in range(1056,10000)]
 
 #Since the data will be huge, save it as a JSON file
-for prefix in prefix_list: #in th entire next block use indent if this line is uncommented
+for prefix in prefix_list:
 
-    #data = available_prods.read()
-    #data_into_list = data.split('\n')
-    #print(data_into_list)
     all_info = {}
 
     for code_ in tqdm(code_list):
@@ -224,6 +221,11 @@ for prefix in prefix_list: #in th entire next block use indent if this line is u
                 else:
                     df = pd.DataFrame(all_info.values(),index=all_info.keys())
                     df.to_json(path, orient = 'split', compression = 'infer', index = 'true')
+                #Release memory to not kill the RAM
+                lst = [df, df_extended, df_initial]
+                del df, df_extended, df_initial
+                del lst
+
             except:
                 print('Data for codes list {} could not be saved'.format(prefix))
 
