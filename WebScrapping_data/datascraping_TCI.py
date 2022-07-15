@@ -135,7 +135,7 @@ def colect_data(code, all_info={}):
                 pass
 
 
-            #Extract information for Packaging and container.
+            #Extract information for Hazard Statements.
             try:
                 for i, prop in enumerate(table):
                     if (prop.string is not None) and ('Hazard Statements' in prop.string):
@@ -186,8 +186,8 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = ['I']#[chr(i) for i in range(65,91)]
-code_list = [str(s).zfill(4) for s in range(1056,10000)]
+prefix_list = ['S', 'T']#[chr(i) for i in range(65,91)]
+code_list = [str(s).zfill(4) for s in range(0,10000)]
 
 #Since the data will be huge, save it as a JSON file
 for prefix in prefix_list:
