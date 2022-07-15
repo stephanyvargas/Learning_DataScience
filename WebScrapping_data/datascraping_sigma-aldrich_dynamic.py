@@ -21,7 +21,9 @@ action = ActionChains(driver)
 #A chrome tab will open and wait for the entire JavaScript to load.
 driver.get("https://www.sigmaaldrich.com/JP/en/product/sigma/v5754")
 html = driver.page_source
-print(html)
+heading1 = driver.find_element(By.CLASS_NAME, "MuiTableBody-root")
+print(heading1.text)
+#print(html)
 
 #Once data has been fully loaded and scraped, close the chrome tab automatically.
 driver.close()
