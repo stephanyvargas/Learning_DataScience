@@ -28,9 +28,12 @@ def colect_data(code, all_info={}):
 
         #Check if the code exists
         if "Not Found" in title:
-            all_info[code] = {'error':'noInfo'}
             print(":NoInfo")
             return False
+        #Check if the code exists
+        if "container" or "tube" in title.lower():
+            print("Warning:Not a Molecule")
+            return ['Accessories', title]
         else:
             print(':OK')
 
@@ -39,12 +42,16 @@ def colect_data(code, all_info={}):
                 #Get the name, CAS and code
                 CAS = title.split(' ')[-1]
                 name = title.strip(CAS).strip()
+                print(CAS.replace('-', ''))
                 if name == 'Service Temporarily':
                     return False
                 else:
                     info_dict['name'] = name
-                    info_dict['CAS'] = CAS
                     info_dict['code'] = code
+                if CAS.replace('-', '').isdigit():
+                    info_dict['CAS'] = CAS
+                else:
+                    print('CAS value '+CAS+' is weird')
             except:
                 pass
 
@@ -53,6 +60,7 @@ def colect_data(code, all_info={}):
                 #Get the amount of product avaliable for purchase, price and region
                 amount  = soup.find_all("td", attrs={"data-attr": "Size:"})
                 price   = soup.find_all("td", attrs={"data-attr": "Unit Price"})
+                #print(amount, price)
                 saitama = soup.find_all("td", attrs={"data-attr": "Saitama (Kawaguchi)"})
                 hyogo   = soup.find_all("td", attrs={"data-attr": "Hyogo (Amagasaki)"})
                 others  = soup.find_all("td", attrs={"data-attr": "Stock in other WH"})
@@ -61,8 +69,9 @@ def colect_data(code, all_info={}):
                     #purchase information available per amount
                     info_per_amount={}
 
-                    a = re.findall(r'\d+', str(a))[0]
+                    a = str(a).split('"Size:">')[1].split('<')[0]#re.findall(r'/d+', str(a))[0]
                     p = str(price[i]).split('¥')[-1].split('<')[0]
+                    print('amount and price', a, p)
                     info_per_amount['price'] = p
 
                     if 'Contact Us' in str(saitama[i]):
@@ -80,7 +89,7 @@ def colect_data(code, all_info={}):
                     else:
                         info_per_amount['Stock in other WH']= re.findall(r'\d+', str(others[i]))[0]
 
-                    info_dict[a+'G'] = info_per_amount
+                    info_dict[a] = info_per_amount
             except:
                 pass
 
@@ -186,8 +195,8 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = ['S', 'T']#[chr(i) for i in range(65,91)]
-code_list = [str(s).zfill(4) for s in range(0,10000)]
+prefix_list = ['S']#[chr(i) for i in range(65,91)]
+code_list = [str(s).zfill(4) for s in range(939,10000)]
 
 #Since the data will be huge, save it as a JSON file
 for prefix in prefix_list:
@@ -221,6 +230,7 @@ for prefix in prefix_list:
                 else:
                     df = pd.DataFrame(all_info.values(),index=all_info.keys())
                     df.to_json(path, orient = 'split', compression = 'infer', index = 'true')
+
                 #Release memory to not kill the RAM
                 lst = [df, df_extended, df_initial]
                 del df, df_extended, df_initial
@@ -228,5 +238,10 @@ for prefix in prefix_list:
 
             except:
                 print('Data for codes list {} could not be saved'.format(prefix))
+
+        if all_info[0] == 'Accessories':
+            file_accessories = open('accessories.txt', 'a')
+            file_accessories.write('{0}  {1}\n'.format(code, all_info[1]))
+            file_accessories.close()
 
         all_info = {}
