@@ -85,38 +85,44 @@ def colect_data(product_url, product_data={}):
             product_details['quatity'] = prod_var.rsplit('-', 1)[1]
             product_details['price'] = values[var_a+2]
             try:
+                #If there is concrete information about the delivery date
                 ExpectedDate = datetime.datetime.strptime(values[var_a+1].split(' ')[1], "%Y年%m月%d日")
                 timedelta = ExpectedDate-CurrentDate
                 product_details['shipment'] = str(abs(timedelta.days)) + ' day(s)'
             except:
+                #If there is a message for the delivery instead of a date
                 product_details['shipment'] = values[var_a+1]
             product_availability[prod_var] = product_details
             var_a += 3
         product_data['Available_products'] = product_availability
 
     except:
+        #In case there is no shipping information but there is a note
         try:
             elements = [element.get_attribute('innerHTML')\
                        for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
                        if 'Note' in element.get_attribute('innerHTML')]
             product_data['Available_products'] = elements[0].replace('<b>', '').replace('</b>', '')
         except:
-            pass
+            #In case the product is no longer available
+            try:
+                print(driver.find_element(By.LINK_TEXT, 'discontinued'))
+                #print('here!', driver.find_element(By.TAG_NAME, 'strong').get_attribute('innerHTML'))
+            except:
+                print('Something went wrong here! Check {}'.format(product_url))
+                print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+                return False
 
     #Once data has been fully loaded and scraped, close the chrome tab automatically.
+    product_availability = {}
     driver.close()
     #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
-
-    #except:
-    #    print('Something went wrong here! Check {}'.format(product_url))
-    #    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
-    #    return False
     return product_data
 
 
 dictionary = {}
 
-colect_data('https://www.sigmaaldrich.com/JP/en/product/aldrich/798096')
+colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/89898')
 
 #with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
 #    urls_file = url_f.readlines()
