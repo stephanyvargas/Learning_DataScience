@@ -30,13 +30,9 @@ def colect_data(code, all_info={}):
         if "Not Found" in title:
             print(":NoInfo")
             return False
-        #Check if the code exists
-        if "container" or "tube" in title.lower():
-            print("Warning:Not a Molecule")
-            return ['Accessories', title]
+
         else:
             print(':OK')
-
 
             try:
                 #Get the name, CAS and code
@@ -48,10 +44,20 @@ def colect_data(code, all_info={}):
                 else:
                     info_dict['name'] = name
                     info_dict['code'] = code
+
+                    #Check if it is a molecule
+                    print('name', name)
+                    if ("container" in name.lower()) or\
+                       ("tube" in name.lower()) or\
+                       ("cartridge" in name.lower()):
+                        print("Warning:Not a Molecule")
+                        return name
+
                 if CAS.replace('-', '').isdigit():
                     info_dict['CAS'] = CAS
                 else:
                     print('CAS value '+CAS+' is weird')
+
             except:
                 pass
 
@@ -195,8 +201,8 @@ def colect_data(code, all_info={}):
 
 
 #Generate all the possible combinations of codes（A0000〜Z9999）
-prefix_list = ['S']#[chr(i) for i in range(65,91)]
-code_list = [str(s).zfill(4) for s in range(939,10000)]
+prefix_list = ['Z']#[chr(i) for i in range(65,91)]
+code_list = [str(s).zfill(4) for s in range(0,10000)]
 
 #Since the data will be huge, save it as a JSON file
 for prefix in prefix_list:
@@ -212,13 +218,20 @@ for prefix in prefix_list:
             all_info = colect_data(code, all_info)
         except:
             print(code + ' timeOut')
-            all_info[code] = {'error':'timeout'}
+            #all_info[code] = {'error':'timeout'}
 
         #Leave a 3 second interval to avoid overloading the server (avoid being blacklisted!)
         time.sleep(3)
 
         if all_info:
             path = 'data_TCI.json'
+
+            if type(all_info) != dict:
+                file_accessories = open('accessories.txt', 'a')
+                file_accessories.write('{0}    {1}\n'.format(code, all_info))
+                file_accessories.close()
+                pass
+
             try:
                 file_exists = os.path.isfile(path)
                 if file_exists:
@@ -239,9 +252,5 @@ for prefix in prefix_list:
             except:
                 print('Data for codes list {} could not be saved'.format(prefix))
 
-        if all_info[0] == 'Accessories':
-            file_accessories = open('accessories.txt', 'a')
-            file_accessories.write('{0}  {1}\n'.format(code, all_info[1]))
-            file_accessories.close()
 
         all_info = {}
