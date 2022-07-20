@@ -8,6 +8,7 @@ from selenium.webdriver.chrome.options import Options
 import datetime
 import time
 import json
+import math
 import yaml #print readeable dictionary in the terminal
 
 
@@ -24,7 +25,7 @@ def colect_data(product_url, product_data={}):
     #Load the Chrome driver and open Chromium in the back.
     ##executable_path is deprecated, need to change it eventually
     driver = webdriver.Chrome(options=options, executable_path='/home/stephy/Selenium_driver_chrome/chromedriver_linux64/chromedriver')
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, 25)
     action = ActionChains(driver)
 
 
@@ -61,61 +62,70 @@ def colect_data(product_url, product_data={}):
     product_data["relatedProducts"] = product_json["relatedProducts"]
     product_data["type"] = product_json["type"]
 
+
     '''Use list_products instead of product_json["materialIds"] since there
     could be more products but are not listed as available'''
     #Get the price, amount and shipping information.
     try:
         availability = driver.find_element(By.CLASS_NAME, "MuiTableBody-root")
+        print('it is here!')
         list_products = availability.text.split('\n')
+        product_availability = {}
+        values = [val for val in list_products if val != '詳細...']
+        num = len(values)/3
+        var_a = 0
+        CurrentDate = datetime.datetime.now()
 
-        if list_products:
-            product_availability = {}
-            num = len(list_products)/4
-            var_a = 0
-            CurrentDate = datetime.datetime.now()
+        if math.ceil(num) != math.floor(num):
+            print('Number of entries is wrong!', ' Number:', num, math.ceil(num), math.floor(num))
 
-            for product in range(int(num)):
-                product_details = {}
-                product_details['quatity'] = list_products[var_a+0].split(' ')[1] +\
-                                             list_products[var_a+0].split(' ')[2]
-                product_details['price'] = list_products[var_a+3]
-                #print(product_details)
-                try:
-                    ExpectedDate = datetime.datetime.strptime(list_products[var_a+1].split(' ')[1], "%Y年%m月%d日")
-                    timedelta = ExpectedDate-CurrentDate
-                    product_details['shipment'] = str(abs(timedelta.days)) + ' days'
-                except:
-                    product_details['shipment'] = list_products[var_a+1]
-                product_availability[list_products[var_a+0].split(' ')[0]] = product_details
-                var_a += 4
+        for product in range(int(num)):
+            product_details = {}
+            prod_var = values[var_a+0].split(' ')[0]
+            product_details['quatity'] = prod_var.rsplit('-', 1)[1]
+            product_details['price'] = values[var_a+2]
+            try:
+                ExpectedDate = datetime.datetime.strptime(values[var_a+1].split(' ')[1], "%Y年%m月%d日")
+                timedelta = ExpectedDate-CurrentDate
+                product_details['shipment'] = str(abs(timedelta.days)) + ' day(s)'
+            except:
+                product_details['shipment'] = values[var_a+1]
+            product_availability[prod_var] = product_details
+            var_a += 3
+        product_data['Available_products'] = product_availability
+
     except:
-        pass
-
-    product_data['Available_products'] = product_availability
+        try:
+            elements = [element.get_attribute('innerHTML')\
+                       for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
+                       if 'Note' in element.get_attribute('innerHTML')]
+            product_data['Available_products'] = elements[0].replace('<b>', '').replace('</b>', '')
+        except:
+            pass
 
     #Once data has been fully loaded and scraped, close the chrome tab automatically.
     driver.close()
-    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+    #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
 
     #except:
     #    print('Something went wrong here! Check {}'.format(product_url))
     #    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
     #    return False
-
     return product_data
+
 
 dictionary = {}
 
-with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
-    urls_file = url_f.readlines()
-    for i, url in enumerate(urls_file[:100]):
-        data = colect_data(url)
-        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
-        print(i+1)
-        if data:
-            json.dump(dictionary, data_f, sort_keys=True, indent=4)
+colect_data('https://www.sigmaaldrich.com/JP/en/product/aldrich/798096')
 
-        dictionary = {}
-
-# to inspect the data that has been saved (in the terminal)
-#print(yaml.dump(data, allow_unicode=True, default_flow_style=False))
+#with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
+#    urls_file = url_f.readlines()
+#    for i, url in enumerate(urls_file[:100]):
+#        data = colect_data(url)
+#        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
+#        print(i+1)
+#        if data:
+#            json.dump(dictionary, data_f, sort_keys=True, indent=4)
+#
+#        dictionary = {}
+#
