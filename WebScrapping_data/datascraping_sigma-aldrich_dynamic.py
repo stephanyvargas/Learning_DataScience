@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from tqdm import tqdm
 import datetime
 import time
 import json
@@ -69,7 +70,6 @@ def colect_data(product_url, product_data={}):
     try:
         availability = driver.find_element(By.CLASS_NAME, "MuiTableBody-root")
         list_products = availability.text.split('\n')
-        print(list_products)
         product_availability = {}
         values = [val for val in list_products if val != '詳細...']
         num = len(values)/3
@@ -121,20 +121,20 @@ def colect_data(product_url, product_data={}):
 
     #Once data has been fully loaded and scraped, close the chrome tab automatically.
     driver.close()
-    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
-    return product_data
 
-##To check just one url
-#colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/89898')
+    #To check the data that is being returned uncomment the next line
+    #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+    return product_data
 
 
 dictionary = {}
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
     urls_file = url_f.readlines()
-    for i, url in enumerate(urls_file[:100]):
+    for url in tqdm(urls_file[:1000]):
         data = colect_data(url)
         dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
-        print(i+1)
         if data:
             json.dump(dictionary, data_f, sort_keys=True, indent=4)
+        else:
+            print("Something is wrong with {}".format(url))
         dictionary = {}
