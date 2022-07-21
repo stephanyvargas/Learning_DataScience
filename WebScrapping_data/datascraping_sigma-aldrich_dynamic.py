@@ -68,70 +68,73 @@ def colect_data(product_url, product_data={}):
     #Get the price, amount and shipping information.
     try:
         availability = driver.find_element(By.CLASS_NAME, "MuiTableBody-root")
-        print('it is here!')
         list_products = availability.text.split('\n')
+        print(list_products)
         product_availability = {}
         values = [val for val in list_products if val != '詳細...']
         num = len(values)/3
         var_a = 0
         CurrentDate = datetime.datetime.now()
 
+        #Check that the shipping information table is properly built
         if math.ceil(num) != math.floor(num):
             print('Number of entries is wrong!', ' Number:', num, math.ceil(num), math.floor(num))
+            print('Check values for ', product_url)
+            return False
 
         for product in range(int(num)):
             product_details = {}
             prod_var = values[var_a+0].split(' ')[0]
-            product_details['quatity'] = prod_var.rsplit('-', 1)[1]
+            product_details['ID - quatity'] = values[var_a+0]
             product_details['price'] = values[var_a+2]
             try:
-                #If there is concrete information about the delivery date
+                #If there is concrete information about the delivery date, get how many days it will take to deliver
                 ExpectedDate = datetime.datetime.strptime(values[var_a+1].split(' ')[1], "%Y年%m月%d日")
                 timedelta = ExpectedDate-CurrentDate
                 product_details['shipment'] = str(abs(timedelta.days)) + ' day(s)'
             except:
-                #If there is a message for the delivery instead of a date
+                #If there is a message for the delivery instead of a date, save the message
                 product_details['shipment'] = values[var_a+1]
             product_availability[prod_var] = product_details
             var_a += 3
         product_data['Available_products'] = product_availability
+        product_availability = {}
 
     except:
-        #In case there is no shipping information but there is a note
         try:
+            #In case there is no shipping information but there is a note
             elements = [element.get_attribute('innerHTML')\
                        for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
                        if 'Note' in element.get_attribute('innerHTML')]
-            product_data['Available_products'] = elements[0].replace('<b>', '').replace('</b>', '')
+            product_data['Available_products'] = {'Note' : elements[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
         except:
-            #In case the product is no longer available
             try:
-                print(driver.find_element(By.LINK_TEXT, 'discontinued'))
-                #print('here!', driver.find_element(By.TAG_NAME, 'strong').get_attribute('innerHTML'))
+                #In case the product is no longer available
+                element = driver.find_element(By.TAG_NAME, 'strong').get_attribute('innerHTML')
+                product_data['Available_products'] = {'WARNING' : 'Product {} might be discontinued.\
+                                                       Contact Technical Service.'.format(element)}
             except:
+                #When hope is lost!
                 print('Something went wrong here! Check {}'.format(product_url))
                 print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
                 return False
 
     #Once data has been fully loaded and scraped, close the chrome tab automatically.
-    product_availability = {}
     driver.close()
-    #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
     return product_data
+
+##To check just one url
+#colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/89898')
 
 
 dictionary = {}
-
-colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/89898')
-
-#with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
-#    urls_file = url_f.readlines()
-#    for i, url in enumerate(urls_file[:100]):
-#        data = colect_data(url)
-#        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
-#        print(i+1)
-#        if data:
-#            json.dump(dictionary, data_f, sort_keys=True, indent=4)
-#
-#        dictionary = {}
-#
+with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
+    urls_file = url_f.readlines()
+    for i, url in enumerate(urls_file[:100]):
+        data = colect_data(url)
+        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
+        print(i+1)
+        if data:
+            json.dump(dictionary, data_f, sort_keys=True, indent=4)
+        dictionary = {}
