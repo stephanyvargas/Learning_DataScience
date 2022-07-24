@@ -11,10 +11,11 @@ import time
 import json
 import math
 import yaml #print readeable dictionary in the terminal
+from random import randint
 
 
 def colect_data(product_url, product_data={}):
-    print(product_url,end=' ')
+    #print(product_url,end=' ')
 
     #try:
     #Create a user that would inspect the webpage (needed to avoid <Access Denied>)
@@ -26,7 +27,7 @@ def colect_data(product_url, product_data={}):
     #Load the Chrome driver and open Chromium in the back.
     ##executable_path is deprecated, need to change it eventually
     driver = webdriver.Chrome(options=options, executable_path='/home/stephy/Selenium_driver_chrome/chromedriver_linux64/chromedriver')
-    wait = WebDriverWait(driver, 25)
+    wait = WebDriverWait(driver, 40)
     action = ActionChains(driver)
 
 
@@ -78,15 +79,15 @@ def colect_data(product_url, product_data={}):
 
         #Check that the shipping information table is properly built
         if math.ceil(num) != math.floor(num):
-            print('Number of entries is wrong!', ' Number:', num, math.ceil(num), math.floor(num))
-            print('Check values for ', product_url)
+            #print('Number of entries is wrong!', ' Number:', num, math.ceil(num), math.floor(num))
+            print('Number of entries is wrong! Check values for ', product_url)
             return False
 
         for product in range(int(num)):
             product_details = {}
             prod_var = values[var_a+0].split(' ')[0]
             product_details['ID - quatity'] = values[var_a+0]
-            product_details['price'] = values[var_a+2]
+            product_details['price'] = values[var_a+2].replace('￥', '')
             try:
                 #If there is concrete information about the delivery date, get how many days it will take to deliver
                 ExpectedDate = datetime.datetime.strptime(values[var_a+1].split(' ')[1], "%Y年%m月%d日")
@@ -116,7 +117,7 @@ def colect_data(product_url, product_data={}):
             except:
                 #When hope is lost!
                 print('Something went wrong here! Check {}'.format(product_url))
-                print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+                #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
                 return False
 
     #Once data has been fully loaded and scraped, close the chrome tab automatically.
@@ -126,15 +127,19 @@ def colect_data(product_url, product_data={}):
     #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
     return product_data
 
+#colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/34133')
+
+random_url = randint
 
 dictionary = {}
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
     urls_file = url_f.readlines()
-    for url in tqdm(urls_file[:1000]):
+    for url_ in tqdm(urls_file[:10000]):
+        url = url_.replace('\n', '')
         data = colect_data(url)
         dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
         if data:
             json.dump(dictionary, data_f, sort_keys=True, indent=4)
-        else:
-            print("Something is wrong with {}".format(url))
+            #else:
+            #print("Could not save the data {}".format(url))
         dictionary = {}
