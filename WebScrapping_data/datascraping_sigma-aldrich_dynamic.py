@@ -5,16 +5,17 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium import webdriver
+from fake_useragent import UserAgent
 from tqdm import tqdm
 import datetime
 import time
 import json
 import math
 import yaml #print readeable dictionary in the terminal
-from random
+import random
 
 
-def colect_data(product_url, product_data={}, inspect_page=False):
+def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
     #try:
     '''To not get detected -> and eventually blacklisted!
@@ -25,9 +26,14 @@ def colect_data(product_url, product_data={}, inspect_page=False):
     # Exclude the collection of enable-automation switches
     # Turn-off useAutomationExtension'''
 
+
+    ua = UserAgent(verify_ssl=False)
+    userAgent = ua.random
     options = webdriver.ChromeOptions()
     options.add_argument("start-maximized")
-    options.add_argument('--proxy-server={}'.format(proxies))
+    #options.add_argument('--headless')
+    options.add_argument('--proxy-server={0}:{1}'.format(proxy_entry['IP Address'], proxy_entry['Port']))
+    #options.add_argument(f'user-agent={userAgent}')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     driver = webdriver.Chrome(options=options,
@@ -39,14 +45,14 @@ def colect_data(product_url, product_data={}, inspect_page=False):
 
     ##executable_path is deprecated, need to change it eventually
     #Load the Chrome driver and open Chromium in the back.
-    #A chrome tab will open and wait 30 sec for the entire JavaScript to load.
+    #A chrome tab will open and wait for the JavaScript to load.
     wait = WebDriverWait(driver, 30)
     action = ActionChains(driver)
     driver.get(product_url)
 
-    if inspect_page:
-        html = driver.page_source
-        print(html)
+    #if inspect_page:
+    html = driver.page_source
+    print(html)
 
 
     #####Load the embedded json in the webpage
@@ -141,18 +147,31 @@ def colect_data(product_url, product_data={}, inspect_page=False):
     ####return product_data
 
 
-colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/34133')
+def get_proxy():
+    #The list consists of 100 IP addresses
+    f = open('proxy_list.json')
+    proxy_data = json.load(f)
+    f.close()
+    return proxy_data
 
 
 dictionary = {}
+proxy_list=get_proxy()
+#for single use tests
+print(proxy_list[random.randint(0,99)])
+colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/34133', proxy_entry=proxy_list[random.randint(0,99)])
+
+
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
     urls_file = url_f.readlines()
-    #run tests with random urls
+
+    '''run tests with random urls'''
     randomlist = random.sample(range(0, 100_000), 5)
     random_url = urls_file[randomlist]
+
     for url_ in tqdm(random_url):
         url = url_.replace('\n', '')
-        data = colect_data(url)
+        data = colect_data(url, proxy_value=proxy_list[random.randint(0,99)]
         dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
         if data:
             json.dump(dictionary, data_f, sort_keys=True, indent=4)
