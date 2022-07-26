@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import chromedriver_autoinstaller # pip install chromedriver-autoinstaller
+import json
 
 chromedriver_autoinstaller.install() # To update your chromedriver automatically
 driver = webdriver.Chrome()
@@ -30,4 +31,5 @@ def get_free_proxies(driver):
 
 free_proxies = get_free_proxies(driver)
 
-print(free_proxies)
+with open('proxy_list.json', 'w') as fout:
+    json.dump(free_proxies, fout)
