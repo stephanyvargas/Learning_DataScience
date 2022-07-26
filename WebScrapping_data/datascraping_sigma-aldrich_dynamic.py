@@ -4,37 +4,50 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
+from selenium import webdriver
 from tqdm import tqdm
 import datetime
 import time
 import json
 import math
 import yaml #print readeable dictionary in the terminal
-from random import randint
+from random
 
 
-def colect_data(product_url, product_data={}):
-    print(product_url,end=' ')
+def colect_data(product_url, product_data={}, inspect_page=False):
 
     #try:
-    #Create a user that would inspect the webpage (needed to avoid <Access Denied>)
-    options = Options()
-    user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.517 Safari/537.36'
-    options.add_argument('user-agent={0}'.format(user_agent))
+    '''To not get detected -> and eventually blacklisted!
+    # disabling enable-automation, or disabling automation controller disables
+       webdriver.navigator which websites uses to detect automation scripts
+    # Rotating the user-agent through execute_cdp_cmd()
+    # Change the property value of the navigator for webdriver to undefined
+    # Exclude the collection of enable-automation switches
+    # Turn-off useAutomationExtension'''
+
+    options = webdriver.ChromeOptions()
+    options.add_argument("start-maximized")
+    options.add_argument('--proxy-server={}'.format(proxies))
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    driver = webdriver.Chrome(options=options,
+                              executable_path='/home/stephy/Selenium_driver_chrome/chromedriver_linux64/chromedriver')
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.53 Safari/537.36'})
+    print(driver.execute_script("return navigator.userAgent;"))
 
 
-    #Load the Chrome driver and open Chromium in the back.
     ##executable_path is deprecated, need to change it eventually
-    driver = webdriver.Chrome(options=options, executable_path='/home/stephy/Selenium_driver_chrome/chromedriver_linux64/chromedriver')
-    wait = WebDriverWait(driver, 25)
+    #Load the Chrome driver and open Chromium in the back.
+    #A chrome tab will open and wait 30 sec for the entire JavaScript to load.
+    wait = WebDriverWait(driver, 30)
     action = ActionChains(driver)
-
-
-    #A chrome tab will open and wait for the entire JavaScript to load.
     driver.get(product_url)
-    html = driver.page_source #Uncomment if the page source needs to be inspected
-    print(html)
+
+    if inspect_page:
+        html = driver.page_source
+        print(html)
+
 
     #####Load the embedded json in the webpage
     ####table = driver.find_element(By.ID, '__NEXT_DATA__')
@@ -129,19 +142,21 @@ def colect_data(product_url, product_data={}):
 
 
 colect_data('https://www.sigmaaldrich.com/JP/en/product/sial/34133')
-#random_url = randint
 
 
-#dictionary = {}
-#with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
-#    urls_file = url_f.readlines()
-#    for url_ in tqdm(urls_file[:10]):
-#        url = url_.replace('\n', '')
-#        data = colect_data(url)
-#        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
-#        if data:
-#            json.dump(dictionary, data_f, sort_keys=True, indent=4)
-#            #else:
-#            #print("Could not save the data {}".format(url))
-#        dictionary = {}
-#
+dictionary = {}
+with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
+    urls_file = url_f.readlines()
+    #run tests with random urls
+    randomlist = random.sample(range(0, 100_000), 5)
+    random_url = urls_file[randomlist]
+    for url_ in tqdm(random_url):
+        url = url_.replace('\n', '')
+        data = colect_data(url)
+        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
+        if data:
+            json.dump(dictionary, data_f, sort_keys=True, indent=4)
+            else:
+            print("Could not save the data {}".format(url))
+        dictionary = {}
+        time.sleep(random.randint(10,30))
