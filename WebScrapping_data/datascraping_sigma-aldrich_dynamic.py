@@ -38,12 +38,17 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     'noProxy': ''})
 
     options = Options()
-    options.proxy = proxy
+    #options.proxy = proxy
     options.add_argument('--headless')
     options.add_argument("start-maximized")
-    options.add_argument('window-size=1920x1080')
     options.add_argument('--no-sandbox')
+    options.add_argument('--disable-setuid-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--window-size=600,400')
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--disable-accelerated-2d-canvas')
     options.add_argument('--disable-gpu')
+    options.add_argument('--proxy-server={}'.format(myProxy))
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     driver = webdriver.Chrome(options=options,
@@ -55,7 +60,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     ##executable_path is deprecated, need to change it eventually
     #Load the Chrome driver and open Chromium in the back.
     #A chrome tab will open and wait for the JavaScript to load.
-    wait = WebDriverWait(driver, 40) #Selenium will wait for a maximum of 40 seconds for an element matching the given criteria to be found
+    wait = WebDriverWait(driver, 40)
     action = ActionChains(driver)
     driver.get(product_url)
 
@@ -169,20 +174,25 @@ def get_proxy():
 
 dictionary = {}
 proxy_list=get_proxy()
-#colect_data('https://www.sigmaaldrich.com/JP/en/product/sigald/179124',
-#             proxy_entry=proxy_list[random.randint(0,len(proxy_list))])
 
+##If one particular element needs to be inspected:
+#colect_data('https://www.sigmaaldrich.com/JP/en/product/sigald/179124',
+#             proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)],
+#             inspect_page=False)
 
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
     urls_file = url_f.readlines()
-    for url_ in tqdm(urls_file[:500]):
+    for url_ in tqdm(urls_file[:5]):
         url = url_.replace('\n', '')
         data = colect_data(url,
                            proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
         dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
         if data:
-            json.dump(dictionary, data_f, sort_keys=True, indent=4)
+            entry = json.load(data_f)
+            entry.append(dictionary)
+            file.seek(0)
+            json.dump(entry, data_f, sort_keys=True, indent=4)
         #else:
         #    print("Could not save the data {}".format(url))
         dictionary = {}
-        time.sleep(random.randint(10,30))
+        time.sleep(random.randint(5,10))
