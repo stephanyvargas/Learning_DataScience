@@ -17,7 +17,7 @@ import random
 
 
 def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
-    print(product_url,end=' ')
+    #print(product_url,end=' ')
 
     #try:
 
@@ -39,7 +39,11 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
     options = Options()
     options.proxy = proxy
+    options.add_argument('--headless')
     options.add_argument("start-maximized")
+    options.add_argument('window-size=1920x1080')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-gpu')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     driver = webdriver.Chrome(options=options,
@@ -142,7 +146,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
                                                        Contact Technical Service.'.format(element)}
             except:
                 #When hope is lost!
-                print('Something went wrong here! Check {}'.format(product_url))
+                print('Something went wrong with innerHTML! Check {}'.format(product_url))
                 #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
                 return False
 
@@ -150,7 +154,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     driver.close()
 
     #####To check the data that is being returned uncomment the next line
-    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+    #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
     return product_data
 
 
@@ -165,21 +169,20 @@ def get_proxy():
 
 dictionary = {}
 proxy_list=get_proxy()
-colect_data('https://www.sigmaaldrich.com/JP/en/product/sigald/179124',
-             proxy_entry=proxy_list[random.randint(0,len(proxy_list))])
+#colect_data('https://www.sigmaaldrich.com/JP/en/product/sigald/179124',
+#             proxy_entry=proxy_list[random.randint(0,len(proxy_list))])
 
 
-#with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
-#    urls_file = url_f.readlines()
-#    for url_ in tqdm(urls_file[:10]):
-#        url = url_.replace('\n', '')
-#        data = colect_data(url,
-#                           proxy_entry=proxy_list[random.randint(0,len(proxy_list))])
-#        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
-#        if data:
-#            json.dump(dictionary, data_f, sort_keys=True, indent=4)
-#        else:
-#            print("Could not save the data {}".format(url))
-#        dictionary = {}
-#        time.sleep(random.randint(10,30))
-#
+with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
+    urls_file = url_f.readlines()
+    for url_ in tqdm(urls_file[:500]):
+        url = url_.replace('\n', '')
+        data = colect_data(url,
+                           proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
+        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
+        if data:
+            json.dump(dictionary, data_f, sort_keys=True, indent=4)
+        #else:
+        #    print("Could not save the data {}".format(url))
+        dictionary = {}
+        time.sleep(random.randint(10,30))
