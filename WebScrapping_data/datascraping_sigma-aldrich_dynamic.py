@@ -66,13 +66,13 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     driver.get(product_url)
 
 
-    #If the page source needs to be inspected
+    ####If the page source needs to be inspected
     if inspect_page:
         html = driver.page_source
         print(html)
 
 
-    #####Load the embedded json in the webpage
+    ####Load the embedded json in the webpage
     table = driver.find_element(By.ID, '__NEXT_DATA__')
     convertedDict = json.loads(table.get_attribute('innerHTML'))
 
@@ -101,15 +101,36 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     product_data["type"] = product_json["type"]
 
 
-    #Get the price, amount and shipping information.
+    ####Get the price, amount and shipping information.
     '''Use list_products instead of product_json["materialIds"] since there
     could be more products but are not listed as available'''
 
+    availability = False
+    side_note = False
+    no_longer_available = False
+    not_available_japan = False
+
+
+    ####Load the shipping information table
     try:
         availability = driver.find_element(By.CLASS_NAME, "MuiTableBody-root")
     except:
-        print('Shipping information missing', product_url)
         pass
+
+    ####In case there is/isn't shipping information and/but there is a note
+    try:
+        side_note = [element.get_attribute('innerHTML')\
+                    for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
+                    if 'Note' in element.get_attribute('innerHTML')]
+    except:
+        pass
+
+    ####In case the product is no longer available
+    try:
+        no_longer_available = driver.find_element(By.TAG_NAME, 'strong').get_attribute('innerHTML')
+    except:
+        pass
+
 
     if availability:
         list_products = availability.text.split('\n')
@@ -117,7 +138,6 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
         values = [val for val in list_products if val != '詳細...']
         num = len(values)/3
         var_a = 0
-        CurrentDate = datetime.datetime.now()
 
         #Check that the shipping information table is properly built
         if math.ceil(num) != math.floor(num):
@@ -130,49 +150,40 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
             prod_var = values[var_a+0].split(' ')[0]
             product_details['ID - quatity'] = values[var_a+0]
             product_details['price'] = values[var_a+2].replace('￥', '')
-            try:
-                #If there is concrete information about the delivery date, get how many days it will take to deliver
-                ExpectedDate = datetime.datetime.strptime(values[var_a+1].split(' ')[1], "%Y年%m月%d日")
-                timedelta = ExpectedDate-CurrentDate
-                product_details['shipment'] = str(abs(timedelta.days)) + ' day(s)'
-            except:
-                #If there is a message for the delivery instead of a date, save the message
-                product_details['shipment'] = values[var_a+1]
-                product_availability.append(product_details)
+            product_details['shipment'] = get_delivery_time(values, var_a)
+            product_availability.append(product_details)
             var_a += 3
         product_data['Available_products'] = product_availability
-        product_availability = []
-        driver.close()
-        return product_data
+
+    if side_note:
+        product_data['Side Note'] = {'Note':elements[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
+        if not availability:
+            product_data['Available_products'] = None
+
+    if no_longer_available:
+        product_data['Side Note'] = {'WARNING' : 'Product {} might be discontinued. Contact Technical Service.'.format(element)}
+        product_data['Available_products'] = None
 
     else:
-        print('product info is breaking the code', product_url)
-    #except:
-    #    try:
-    #        #In case there is no shipping information but there is a note
-    #        elements = [element.get_attribute('innerHTML')\
-    #                   for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
-    #                   if 'Note' in element.get_attribute('innerHTML')]
-    #        product_data['Available_products'] = {'Note' : elements[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
-    #    except:
-    #        try:
-    #            #In case the product is no longer available
-    #            element = driver.find_element(By.TAG_NAME, 'strong').get_attribute('innerHTML')
-    #            product_data['Available_products'] = {'WARNING' : 'Product {} might be discontinued.\
-    #                                                   Contact Technical Service.'.format(element)}
-    #        except:
-    #            #When hope is lost!
-    #            print('Something went wrong with innerHTML! Check {}'.format(product_url))
-    #            #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
-    #            return False
+        #When hope has been lost!
+        print('Product info is not yet supported by this code', product_url)
 
-    ##Once data has been fully loaded and scraped, close the chrome tab automatically.
     driver.close()
-
     #####To check the data that is being returned uncomment the next line
-    #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
-    return product_data
+    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+    return False
 
+
+def get_delivery_time(values, var_a):
+    try:
+        #If there is concrete information about the delivery date, get how many days it will take to deliver
+        CurrentDate = datetime.datetime.now()
+        ExpectedDate = datetime.datetime.strptime(values[var_a+1].split(' ')[1], "%Y年%m月%d日")
+        timedelta = ExpectedDate-CurrentDate
+        return str(abs(timedelta.days)) + ' day(s)'
+    except:
+        #If there is a message for the delivery instead of a date, save the message
+        return values[var_a+1]
 
 
 def get_proxy():
@@ -187,23 +198,24 @@ dictionary = {}
 proxy_list=get_proxy()
 
 ##If one particular element needs to be inspected:
-#colect_data('https://www.sigmaaldrich.com/product/ALDRICH/578088',
-#             proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)],
-#             inspect_page=False)
+colect_data('https://www.sigmaaldrich.com/product/ALDRICH/578088',
+             proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)],
+             inspect_page=False)
 
-with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
-    urls_file = url_f.readlines()
-    for url_ in tqdm(urls_file[:100]):
-        url = url_.replace('\n', '')
-        data = colect_data(url,
-                           proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
-        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
-        if data:
-            with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
-                entry = json.load(data_f)
-                entry.append(dictionary)
-                data_f.seek(0)
-                json.dump(entry, data_f, indent=4)
-            entry.clear()
-        dictionary = {}
-        time.sleep(random.randint(5,10))
+#with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
+#    urls_file = url_f.readlines()
+#    for url_ in tqdm(urls_file[10:30]):
+#        url = url_.replace('\n', '')
+#        data = colect_data(url,
+#                           proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
+#        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
+#        if data:
+#            with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
+#                entry = json.load(data_f)
+#                entry.append(dictionary)
+#                data_f.seek(0)
+#                json.dump(entry, data_f, indent=4)
+#            entry.clear()
+#        dictionary = {}
+#        time.sleep(random.randint(5,10))
+#
