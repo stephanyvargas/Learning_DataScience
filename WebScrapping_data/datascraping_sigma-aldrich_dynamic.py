@@ -6,6 +6,7 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.proxy import *
+from selenium.common.exceptions import WebDriverException
 from tqdm import tqdm
 import datetime
 import time
@@ -63,8 +64,13 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     #A chrome tab will open and wait for the JavaScript to load.
     wait = WebDriverWait(driver, 40)
     action = ActionChains(driver)
-    driver.get(product_url)
 
+    try:
+        driver.get(product_url)
+    except WebDriverException:
+        #skip if the internet connection is bad and is returning conectivity error
+        print('Timeout')
+        return False
 
     ####If the page source needs to be inspected
     if inspect_page:
@@ -162,7 +168,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
         product_data['Available_products'] = product_availability
 
     elif side_note:
-        product_data['Side Note'] = {'Note':elements[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
+        product_data['Side Note'] = {'Note':side_note[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
         if not availability:
             product_data['Available_products'] = None
 
@@ -216,7 +222,7 @@ proxy_list=get_proxy()
 
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
     urls_file = url_f.readlines()
-    for url_ in tqdm(urls_file[:10]):
+    for url_ in tqdm(urls_file[:2000]):
         url = url_.replace('\n', '')
         data = colect_data(url,
                            proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
