@@ -14,6 +14,7 @@ import math
 import yaml #print readeable dictionary in the terminal
 from random import randint
 import random
+import os
 
 
 def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
@@ -38,7 +39,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     'noProxy': ''})
 
     options = Options()
-    #options.proxy = proxy
+    options.proxy = proxy
     options.add_argument('--headless')
     options.add_argument("start-maximized")
     options.add_argument('--no-sandbox')
@@ -48,7 +49,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     options.add_argument('--ignore-certificate-errors')
     options.add_argument('--disable-accelerated-2d-canvas')
     options.add_argument('--disable-gpu')
-    options.add_argument('--proxy-server={}'.format(myProxy))
+    #options.add_argument('--proxy-server={}'.format(myProxy))
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     driver = webdriver.Chrome(options=options,
@@ -103,10 +104,16 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     #Get the price, amount and shipping information.
     '''Use list_products instead of product_json["materialIds"] since there
     could be more products but are not listed as available'''
+
     try:
         availability = driver.find_element(By.CLASS_NAME, "MuiTableBody-root")
+    except:
+        print('Shipping information missing', product_url)
+        pass
+
+    if availability:
         list_products = availability.text.split('\n')
-        product_availability = {}
+        product_availability = []
         values = [val for val in list_products if val != '詳細...']
         num = len(values)/3
         var_a = 0
@@ -114,7 +121,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
         #Check that the shipping information table is properly built
         if math.ceil(num) != math.floor(num):
-            #print('Number of entries is wrong!', ' Number:', num, math.ceil(num), math.floor(num))
+            print(list_products)
             print('Number of entries is wrong! Check values for ', product_url)
             return False
 
@@ -131,31 +138,35 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
             except:
                 #If there is a message for the delivery instead of a date, save the message
                 product_details['shipment'] = values[var_a+1]
-            product_availability[prod_var] = product_details
+                product_availability.append(product_details)
             var_a += 3
         product_data['Available_products'] = product_availability
-        product_availability = {}
+        product_availability = []
+        driver.close()
+        return product_data
 
-    except:
-        try:
-            #In case there is no shipping information but there is a note
-            elements = [element.get_attribute('innerHTML')\
-                       for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
-                       if 'Note' in element.get_attribute('innerHTML')]
-            product_data['Available_products'] = {'Note' : elements[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
-        except:
-            try:
-                #In case the product is no longer available
-                element = driver.find_element(By.TAG_NAME, 'strong').get_attribute('innerHTML')
-                product_data['Available_products'] = {'WARNING' : 'Product {} might be discontinued.\
-                                                       Contact Technical Service.'.format(element)}
-            except:
-                #When hope is lost!
-                print('Something went wrong with innerHTML! Check {}'.format(product_url))
-                #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
-                return False
+    else:
+        print('product info is breaking the code', product_url)
+    #except:
+    #    try:
+    #        #In case there is no shipping information but there is a note
+    #        elements = [element.get_attribute('innerHTML')\
+    #                   for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
+    #                   if 'Note' in element.get_attribute('innerHTML')]
+    #        product_data['Available_products'] = {'Note' : elements[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
+    #    except:
+    #        try:
+    #            #In case the product is no longer available
+    #            element = driver.find_element(By.TAG_NAME, 'strong').get_attribute('innerHTML')
+    #            product_data['Available_products'] = {'WARNING' : 'Product {} might be discontinued.\
+    #                                                   Contact Technical Service.'.format(element)}
+    #        except:
+    #            #When hope is lost!
+    #            print('Something went wrong with innerHTML! Check {}'.format(product_url))
+    #            #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+    #            return False
 
-    #Once data has been fully loaded and scraped, close the chrome tab automatically.
+    ##Once data has been fully loaded and scraped, close the chrome tab automatically.
     driver.close()
 
     #####To check the data that is being returned uncomment the next line
@@ -165,7 +176,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
 
 def get_proxy():
-    #The list consists of ~100 IP addresses
+    #The list consists of ~100 IP addresses, can be updated running the get_proxy.py script
     f = open('proxy_list.json')
     proxy_data = json.load(f)
     f.close()
@@ -176,23 +187,23 @@ dictionary = {}
 proxy_list=get_proxy()
 
 ##If one particular element needs to be inspected:
-#colect_data('https://www.sigmaaldrich.com/JP/en/product/sigald/179124',
+#colect_data('https://www.sigmaaldrich.com/product/ALDRICH/578088',
 #             proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)],
 #             inspect_page=False)
 
-with open('sigmaaldrich_products_urls.txt', 'r') as url_f, open("data_sigmaaldrich.json", 'a+') as data_f:
+with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
     urls_file = url_f.readlines()
-    for url_ in tqdm(urls_file[:5]):
+    for url_ in tqdm(urls_file[:100]):
         url = url_.replace('\n', '')
         data = colect_data(url,
                            proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
         dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
         if data:
-            entry = json.load(data_f)
-            entry.append(dictionary)
-            file.seek(0)
-            json.dump(entry, data_f, sort_keys=True, indent=4)
-        #else:
-        #    print("Could not save the data {}".format(url))
+            with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
+                entry = json.load(data_f)
+                entry.append(dictionary)
+                data_f.seek(0)
+                json.dump(entry, data_f, indent=4)
+            entry.clear()
         dictionary = {}
         time.sleep(random.randint(5,10))
