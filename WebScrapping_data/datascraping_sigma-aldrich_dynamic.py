@@ -108,10 +108,10 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     availability = False
     side_note = False
     no_longer_available = False
-    not_available_japan = False
+    not_available = False
 
 
-    ####Load the shipping information table
+    ####Load the shipping information table (if it exists)
     try:
         availability = driver.find_element(By.CLASS_NAME, "MuiTableBody-root")
     except:
@@ -119,6 +119,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
     ####In case there is/isn't shipping information and/but there is a note
     try:
+        driver.execute_script("window.scrollTo(0, 100)")
         side_note = [element.get_attribute('innerHTML')\
                     for element in driver.find_element(By.ID, '__next').find_elements(By.TAG_NAME, "span")\
                     if 'Note' in element.get_attribute('innerHTML')]
@@ -131,47 +132,58 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     except:
         pass
 
+    ####In case the product is currently unavailable or is not for sale in Japan
+    try:
+        not_available = driver.find_element(By.XPATH, '//*[@id="prodductDetailGrid"]/div[1]/div/div/div[2]/div/div[3]/div/div/div/div/div/span[1]').get_attribute('innerHTML')
+    except:
+        pass
+
 
     if availability:
         list_products = availability.text.split('\n')
         product_availability = []
         values = [val for val in list_products if val != '詳細...']
-        num = len(values)/3
+        idx = [i for i, value in enumerate(values) if values[0][:4] in value]
+        idx_values = [idx[i] - idx[i-1] for i in range(1, len(idx))]
+        idx_values.append(len(values)-idx[-1])
         var_a = 0
-
-        #Check that the shipping information table is properly built
-        if math.ceil(num) != math.floor(num):
-            print(list_products)
-            print('Number of entries is wrong! Check values for ', product_url)
-            return False
-
-        for product in range(int(num)):
+        for n, product in enumerate(idx):
             product_details = {}
             prod_var = values[var_a+0].split(' ')[0]
             product_details['ID - quatity'] = values[var_a+0]
-            product_details['price'] = values[var_a+2].replace('￥', '')
             product_details['shipment'] = get_delivery_time(values, var_a)
+            if idx_values[n] == 3:
+                product_details['price'] = values[var_a+2].replace('￥', '')
+            if idx_values[n] == 4:
+                product_details['price'] = values[var_a+3].replace('￥', '')
+                product_details['note'] = values[var_a+2].replace('￥', '')
             product_availability.append(product_details)
-            var_a += 3
+            var_a += idx_values[n]
         product_data['Available_products'] = product_availability
 
-    if side_note:
+    elif side_note:
         product_data['Side Note'] = {'Note':elements[0].replace('<b>', '').replace('</b>', '').replace('Note: ', '') + 'Technical Service'}
         if not availability:
             product_data['Available_products'] = None
 
-    if no_longer_available:
-        product_data['Side Note'] = {'WARNING' : 'Product {} might be discontinued. Contact Technical Service.'.format(element)}
-        product_data['Available_products'] = None
+    elif no_longer_available:
+        product_data['Side Note'] = {'WARNING' : 'Product {} might be discontinued. Contact Technical Service.'.format(no_longer_available)}
+        if not availability:
+            product_data['Available_products'] = None
+
+    elif not_available:
+        product_data['Side Note'] = {'WARNING' : not_available}
+        if not availability:
+            product_data['Available_products'] = None
 
     else:
-        #When hope has been lost!
         print('Product info is not yet supported by this code', product_url)
+        return False
 
-    driver.close()
     #####To check the data that is being returned uncomment the next line
-    print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
-    return False
+    #print(yaml.dump(product_data, allow_unicode=True, default_flow_style=False))
+    driver.close()
+    return product_data
 
 
 def get_delivery_time(values, var_a):
@@ -198,24 +210,23 @@ dictionary = {}
 proxy_list=get_proxy()
 
 ##If one particular element needs to be inspected:
-colect_data('https://www.sigmaaldrich.com/product/ALDRICH/578088',
-             proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)],
-             inspect_page=False)
+#colect_data('https://www.sigmaaldrich.com/JP/en/product/aldrich/eme00109',
+#             proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)],
+#             inspect_page=False)
 
-#with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
-#    urls_file = url_f.readlines()
-#    for url_ in tqdm(urls_file[10:30]):
-#        url = url_.replace('\n', '')
-#        data = colect_data(url,
-#                           proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
-#        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
-#        if data:
-#            with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
-#                entry = json.load(data_f)
-#                entry.append(dictionary)
-#                data_f.seek(0)
-#                json.dump(entry, data_f, indent=4)
-#            entry.clear()
-#        dictionary = {}
-#        time.sleep(random.randint(5,10))
-#
+with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
+    urls_file = url_f.readlines()
+    for url_ in tqdm(urls_file[:10]):
+        url = url_.replace('\n', '')
+        data = colect_data(url,
+                           proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
+        dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
+        if data:
+            with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
+                entry = json.load(data_f)
+                entry.append(dictionary)
+                data_f.seek(0)
+                json.dump(entry, data_f, indent=4)
+            entry.clear()
+        dictionary = {}
+        time.sleep(random.randint(5,10))
