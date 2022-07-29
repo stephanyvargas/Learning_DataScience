@@ -77,10 +77,14 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
         html = driver.page_source
         print(html)
 
-
-    ####Load the embedded json in the webpage
-    table = driver.find_element(By.ID, '__NEXT_DATA__')
-    convertedDict = json.loads(table.get_attribute('innerHTML'))
+    try:
+        ####Load the embedded json in the webpage
+        driver.execute_script("window.scrollTo(0, random.randint(60,100))")
+        table = driver.find_element(By.ID, '__NEXT_DATA__')
+        convertedDict = json.loads(table.get_attribute('innerHTML'))
+    except:
+        print('__NEXT_DATA__ element could not be loaded', product_url)
+        return False
 
     product_json = convertedDict["props"]["pageProps"]["data"]["getProductDetail"]
     product_data["url"] = product_url
@@ -162,7 +166,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
                 product_details['price'] = values[var_a+2].replace('￥', '')
             if idx_values[n] == 4:
                 product_details['price'] = values[var_a+3].replace('￥', '')
-                product_details['note'] = values[var_a+2].replace('￥', '')
+                product_details['note'] = values[var_a+2]
             product_availability.append(product_details)
             var_a += idx_values[n]
         product_data['Available_products'] = product_availability
