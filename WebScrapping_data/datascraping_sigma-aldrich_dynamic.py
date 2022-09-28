@@ -7,14 +7,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.proxy import *
 from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import NoSuchElementException
+from random import randint
 from tqdm import tqdm
+import traceback
 import datetime
 import time
 import json
 import math
 import yaml #print readeable dictionary in the terminal
-from random import randint
-import random
 import os
 
 
@@ -43,6 +44,8 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     options.proxy = proxy
     options.add_argument('--headless')
     options.add_argument("start-maximized")
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-setuid-sandbox')
     options.add_argument('--disable-dev-shm-usage')
@@ -56,8 +59,9 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     driver = webdriver.Chrome(options=options,
                               executable_path='/home/stephy/Selenium_driver_chrome/chromedriver_linux64/chromedriver')
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.53 Safari/537.36'})
-
+    driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.0 (X11; Linux x86_64)'
+                                                                         'AppleWebKit/537.36 (KHTML, like Gecko)'
+                                                                         'Chrome/33.0.1750.517 Safari/537.36'})
 
     ##executable_path is deprecated, need to change it eventually
     #Load the Chrome driver and open Chromium in the back.
@@ -70,6 +74,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     except WebDriverException:
         #skip if the internet connection is bad and is returning conectivity error
         print('Timeout')
+        driver.close()
         return False
 
     ####If the page source needs to be inspected
@@ -79,36 +84,41 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
     try:
         ####Load the embedded json in the webpage
-        driver.execute_script("window.scrollTo(0, random.randint(60,100))")
+        driver.execute_script("window.scrollTo(0, 100)")
         table = driver.find_element(By.ID, '__NEXT_DATA__')
         convertedDict = json.loads(table.get_attribute('innerHTML'))
-    except:
+    except NoSuchElementException:
         print('__NEXT_DATA__ element could not be loaded', product_url)
+        driver.close()
         return False
 
-    product_json = convertedDict["props"]["pageProps"]["data"]["getProductDetail"]
-    product_data["url"] = product_url
-    product_data['id'] = product_json['id']
-    product_data['brand'] = product_json["brand"]["name"]
-    product_data['aliases'] = product_json["aliases"]
-    product_data['name'] = product_json["name"]
-    product_data["molecularWeight"] = product_json["molecularWeight"]
-    product_data["empiricalFormula"] = product_json["empiricalFormula"]
-    product_data["linearFormula"] = product_json["linearFormula"]
-    product_data["synonyms"] = product_json["synonyms"]
-    product_data["attributes"] = product_json["attributes"] #Here is the SMILES string!
-    product_data["materialIds"] = product_json["materialIds"] #Available products, no amount, price or shipping info available.
-    product_data["compliance"] = product_json["compliance"]
-    product_data["complianceReach"] = product_json["complianceReach"]
-    product_data["Metadata"] = product_json["browserMetadata"] #Basic information displayed in the website, Includes CAS if available
-    product_data["features"] = product_json["features"]
-    product_data["components"] = product_json["components"]
-    product_data["substanceCount"] = product_json["substanceCount"]
-    product_data["productCategories"] = product_json["productCategories"]
-    product_data["catalogId"] = product_json["catalogId"]
-    product_data["paMessage"] = product_json["paMessage"]
-    product_data["relatedProducts"] = product_json["relatedProducts"]
-    product_data["type"] = product_json["type"]
+    try:
+        product_json = convertedDict["props"]["pageProps"]["data"]["getProductDetail"]
+        product_data["url"] = product_url
+        product_data['id'] = product_json['id']
+        product_data['brand'] = product_json["brand"]["name"]
+        product_data['aliases'] = product_json["aliases"]
+        product_data['name'] = product_json["name"]
+        product_data["molecularWeight"] = product_json["molecularWeight"]
+        product_data["empiricalFormula"] = product_json["empiricalFormula"]
+        product_data["linearFormula"] = product_json["linearFormula"]
+        product_data["synonyms"] = product_json["synonyms"]
+        product_data["attributes"] = product_json["attributes"] #Here is the SMILES string!
+        product_data["materialIds"] = product_json["materialIds"] #Available products, no amount, price or shipping info available.
+        product_data["compliance"] = product_json["compliance"]
+        product_data["complianceReach"] = product_json["complianceReach"]
+        product_data["Metadata"] = product_json["browserMetadata"] #Basic information displayed in the website, Includes CAS if available
+        product_data["features"] = product_json["features"]
+        product_data["components"] = product_json["components"]
+        product_data["substanceCount"] = product_json["substanceCount"]
+        product_data["productCategories"] = product_json["productCategories"]
+        product_data["catalogId"] = product_json["catalogId"]
+        product_data["paMessage"] = product_json["paMessage"]
+        product_data["relatedProducts"] = product_json["relatedProducts"]
+        product_data["type"] = product_json["type"]
+    except KeyError:
+        print('Inner json is not loading... "data" is missing ', product_url)
+        return False
 
 
     ####Get the price, amount and shipping information.
@@ -177,7 +187,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
             product_data['Available_products'] = None
 
     elif no_longer_available:
-        product_data['Side Note'] = {'WARNING' : 'Product {} might be discontinued. Contact Technical Service.'.format(no_longer_available)}
+        product_data['Side Note'] = {'WARNING' : 'Product might be discontinued or pack size might not be available. Contact Technical Service.'}
         if not availability:
             product_data['Available_products'] = None
 
@@ -188,6 +198,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
     else:
         print('Product info is not yet supported by this code', product_url)
+        driver.close()
         return False
 
     #####To check the data that is being returned uncomment the next line
@@ -220,16 +231,16 @@ dictionary = {}
 proxy_list=get_proxy()
 
 ##If one particular element needs to be inspected:
-#colect_data('https://www.sigmaaldrich.com/JP/en/product/aldrich/eme00109',
-#             proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)],
+#colect_data('https://www.sigmaaldrich.com/JP/en/product/aldrich/145025',
+#             proxy_entry=proxy_list[randint(0,len(proxy_list)-1)],
 #             inspect_page=False)
 
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
     urls_file = url_f.readlines()
-    for url_ in tqdm(urls_file[:2000]):
+    for url_ in tqdm(urls_file[21:150]):
         url = url_.replace('\n', '')
         data = colect_data(url,
-                           proxy_entry=proxy_list[random.randint(0,len(proxy_list)-1)])
+                           proxy_entry=proxy_list[randint(0,len(proxy_list)-1)])
         dictionary[url.split('/')[-2] + '_' + url.split('/')[-1]] = data
         if data:
             with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
@@ -239,4 +250,4 @@ with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
                 json.dump(entry, data_f, indent=4)
             entry.clear()
         dictionary = {}
-        time.sleep(random.randint(5,10))
+        time.sleep(randint(10,25))
