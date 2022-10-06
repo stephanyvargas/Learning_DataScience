@@ -1,4 +1,5 @@
 import json
+import re
 
 def get_duplicates(lst):
     #check for repeated elements
@@ -13,13 +14,32 @@ def get_duplicates(lst):
             return duplist
 
 
-with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
-    entry = json.load(data_f)
+def get_unique_code(lst, how_many):
+    code =[]
+    for i in range(how_many):
+        code.append(list(lst[i].keys())[0])
+    return code
 
-lst = []
-for product in entry:
-    prod = list(product.keys())[0].replace('_', '/')
-    lst.append('https://www.sigmaaldrich.com/product/'+prod)
+
+def main():
+    with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
+        entry = json.load(data_f)
+
+    print(get_unique_code(entry, 20))
+
+    '''    for product in entry[i][code[i]]['Available_products']:
+            quantity = re.findall(r'\d+',product['ID - quatity'])[-1]
+            units = product['ID - quatity'].split(quantity)[-1].strip()
+            print(i, ': ', quantity, units)
+    '''
+    #print(code)
+
+if __name__ == "__main__":
+    main()
+
+
+
+
 
 
 #get_duplicates(lst)
@@ -30,7 +50,7 @@ for product in entry:
 #    data_f.seek(0)
 #    json.dump(entry, data_f, sort_keys=True, indent=4)
 
-
+'''
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
     urls_file = url_f.readlines()
 
@@ -48,3 +68,4 @@ with open('sigmaaldrich_products_urls_intermediate.txt', 'w') as fp:
         # write each item on a new line
         fp.write("%s\n" % item)
     print('Done')
+'''
