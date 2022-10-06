@@ -62,8 +62,10 @@ def get_smiles(lst,how_many,code):
         for attribute in lst[i][code[i]]['attributes']:
             if attribute['key'] == 'smiles string':
                 smile_string = attribute['values'][0]
+                smile_rdkit = None
                 smiles.append({'code' : code[i],
-                               'sigma_aldrich_smiles' : smile_string})
+                               'sigma_aldrich_smiles' : smile_string,
+                               'rdkit_smiles' : smile_rdkit})
     smiles_df = pd.DataFrame(smiles)
     smiles_df.index = smiles_df['code']
     smiles_df.drop(['code'], axis=1, inplace=True)
