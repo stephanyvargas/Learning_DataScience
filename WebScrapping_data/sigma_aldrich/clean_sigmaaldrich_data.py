@@ -74,18 +74,19 @@ def get_available_products(lst, code):
                 title = compound[code[i]]['Metadata'].get('title')
                 url = compound[code[i]].get('url')
                 na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'note' : note})
-
+            '''
             else:
                 for product in compound[code[i]]['Available_products']:
                     # Check if there are any special notes on the product
+
                     note = product.get('note')
                     if note and (note[-1] == '0'):
                         note == None
 
                     # Get the quatity and the units of the product.
-                    quantity = re.findall(r'\d+',product['ID - quatity'])[-1]
+                    quantity = re.findall(r'\d+',product['ID - quatity'])
                     if quantity and len(quantity) <= 5:
-                        amount = quantity
+                        amount = quantity[-1]
                         unit = product['ID - quatity'].split(amount)[-1].strip()
                     else:
                         amount, unit = None, None
@@ -113,27 +114,27 @@ def get_available_products(lst, code):
                                      'stock_japan' : stock_japan,
                                      'aprox_delivery_time' : delivery_time,
                                      'special_remarks' : note})
-
+                    '''
         except ValueError:
-            #print(i, code[i])
-            #print(f'WARNING ValueError: Check compound {code[i]}, ', compound)
+            print(i, code[i])
+            print(f'WARNING ValueError: Check compound {code[i]}, ', compound)
             pass
         except TypeError:
-            #print(i, code[i])
-            #print(f'WARNING TypeError: Check compound {code[i]}, ', compound)
+            print(i, code[i])
+            print(f'WARNING TypeError: Check compound {code[i]}, ', compound)
             pass
         except IndexError:
-            #print(i, code[i])
-            #print(f'WARNING IndexError: Check compound {code[i]}, ', compound)
+            print(i, code[i])
+            print(f'WARNING IndexError: Check compound {code[i]}, ', compound)
             pass
         except KeyError:
-            #print(i, code[i])
-            #print(f'WARNING KeyError: Check compound {code[i]}, ', compound)
+            print(i, code[i])
+            print(f'WARNING KeyError: Check compound {code[i]}, ', compound)
             pass
 
-    products_df = pd.DataFrame(products)
-    na_products_df = pd.DataFrame(na_products)
-    return products_df, na_products_df
+    #products_df = pd.DataFrame(products)
+    #na_products_df = pd.DataFrame(na_products)
+    #return products_df, na_products_df
 
 
 def get_smiles(lst,how_many,code):
@@ -156,10 +157,11 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry#[38770:38795]
+    products_list = entry[12070:12080]
     code = get_unique_code(products_list)
-    df_prod, df_naproduct = get_available_products(products_list, code)
-    print(df_prod)
+    get_available_products(products_list, code)
+    #df_prod, df_naproduct = get_available_products(products_list, code)
+    #print(df_prod)
     #print(df_naproduct.note.unique())
     '''df = get_smiles(products_list,num,code)
     print(df.info())
