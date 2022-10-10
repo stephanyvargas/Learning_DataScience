@@ -1,6 +1,14 @@
 import pandas as pd
+from rdkit import Chem
+import pprint
 import json
 import re
+
+def get_cansmi(smi):
+        try:
+            return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
+        except:
+            return None
 
 def get_duplicates(lst):
     #check for repeated elements
@@ -25,8 +33,9 @@ def get_unique_code(lst, how_many):
 def get_available_products(lst, how_many, code):
     products = []
     for i in range(how_many):
-        for product in lst[i][code[i]]['Available_products']:
-            try:
+        try:
+            for product in lst[i][code[i]]['Available_products']:
+                #j=i
                 quantity = re.findall(r'\d+',product['ID - quatity'])[-1]
                 if quantity and len(quantity) <= 5:
                     amount = quantity
@@ -37,7 +46,7 @@ def get_available_products(lst, how_many, code):
                 price = int(product['price'].replace(',',''))
                 delivery_time = product['shipment']
 
-                if 'Orders outside of US' in delivery_time:
+                if 'Orders outside of US' or '米国および欧州外の注文の場合' in delivery_time:
                     stock_japan = False
                 else:
                     stock_japan = True
@@ -48,8 +57,19 @@ def get_available_products(lst, how_many, code):
                                  'price' : price,
                                  'stock_japan' : stock_japan,
                                  'aprox. delivery_time' : delivery_time})
-            except TypeError:
-                print(f'WARNING: Check product {code[i]}')
+        except ValueError:
+            #print(f'WARNING ValueError: Check product {code[j]}, ', product)
+            pass
+        except TypeError:
+            #print(f'WARNING TypeError: Check product {code[j]}, ', lst[j][code[j]])
+            pass
+        except IndexError:
+            #print(f'WARNING IndexError: Check product {code[j]}, ', product)
+            pass
+        except KeyError:
+            #print(f'WARNING KeyError: Check product {code[j]}, ', product)
+            pass
+
     products_df = pd.DataFrame(products)
     products_df.index = products_df['code']
     products_df.drop(['code'], axis=1, inplace=True)
@@ -68,18 +88,25 @@ def get_smiles(lst,how_many,code):
                                'rdkit_smiles' : smile_rdkit})
     smiles_df = pd.DataFrame(smiles)
     smiles_df.index = smiles_df['code']
+    smiles_df['rdkit_smiles'] = smiles_df.sigma_aldrich_smiles.apply(get_cansmi)
     smiles_df.drop(['code'], axis=1, inplace=True)
     return smiles_df
-
 
 def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    num = 10
+    num = len(entry)
     code = get_unique_code(entry, num)
-    #print(get_available_products(entry, num, code))
-    print(get_smiles(entry,num,code))
+    df_prod = get_available_products(entry, num, code)
+    print(df_prod.sample(20))
+    '''df = get_smiles(entry,num,code)
+    print(df.info())
+    print('original dataset : ', len(entry),
+          'available products : ', len(df_prod),
+          'smiles dataset : ', len(df))
+    '''
+    #print(len(entry))
 
 if __name__ == "__main__":
     main()
