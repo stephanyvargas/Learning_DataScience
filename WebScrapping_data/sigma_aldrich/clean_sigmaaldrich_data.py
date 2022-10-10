@@ -46,7 +46,7 @@ def get_available_products(lst, how_many, code):
                 price = int(product['price'].replace(',',''))
                 delivery_time = product['shipment']
 
-                if 'Orders outside of US' or '米国および欧州外の注文の場合' in delivery_time:
+                if ('Orders outside of US' in delivery_time) or ('米国および欧州外の注文の場合' in delivery_time):
                     stock_japan = False
                 else:
                     stock_japan = True
