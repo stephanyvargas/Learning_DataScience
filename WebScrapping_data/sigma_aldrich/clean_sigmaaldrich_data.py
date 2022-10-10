@@ -23,56 +23,75 @@ def get_duplicates(lst):
             return duplist
 
 
-def get_unique_code(lst, how_many):
+def get_unique_code(lst):
     code =[]
-    for i in range(how_many):
-        code.append(list(lst[i].keys())[0])
+    for value in lst:
+        code.append(list(value.keys())[0])
     return code
 
 
-def get_available_products(lst, how_many, code):
+def get_available_products(lst, code):
     products = []
-    for i in range(how_many):
+    for i, compound in enumerate(lst):
         try:
-            for product in lst[i][code[i]]['Available_products']:
-                #j=i
-                quantity = re.findall(r'\d+',product['ID - quatity'])[-1]
-                if quantity and len(quantity) <= 5:
-                    amount = quantity
-                    unit = product['ID - quatity'].split(amount)[-1].strip()
-                else:
-                    amount, unit = None, None
+            # Get warnings from the company regarding products
+            if hasattr(compound[code[i]]['Available_products'], 'get'):
+                note1 = compound[code[i]]['Available_products'].get('WARNING')
+                print(note1.replace('  ', ''))
+                pass
+            else:
+                print(compound[code[i]]['Available_products'][0])
 
-                price = int(product['price'].replace(',',''))
-                delivery_time = product['shipment']
+                for product in compound[code[i]]['Available_products']:
 
-                if ('Orders outside of US' in delivery_time) or ('米国および欧州外の注文の場合' in delivery_time):
-                    stock_japan = False
-                else:
-                    stock_japan = True
+                    # Check if there are any special notes on the product
 
-                products.append({'code' : code[i],
-                                 'amount' : amount,
-                                 'unit' : unit,
-                                 'price' : price,
-                                 'stock_japan' : stock_japan,
-                                 'aprox. delivery_time' : delivery_time})
+
+                    # Get the quatity and the units of the product.
+                    quantity = re.findall(r'\d+',product['ID - quatity'])[-1]
+                    if quantity and len(quantity) <= 5:
+                        amount = quantity
+                        unit = product['ID - quatity'].split(amount)[-1].strip()
+                    else:
+                        amount, unit = None, None
+
+                    # Check if there are products that need to be shipped from USA
+                    delivery_time = product['shipment']
+                    if '申し訳ございませんが、この製品のフルフィルメントと配送が遅延しています。' in delivery_time:
+                        delivery_time = 'Delayed'
+                    if ('Orders outside of US' in delivery_time) or ('米国および欧州外の注文の場合' in delivery_time):
+                        stock_japan = False
+                    else:
+                        stock_japan = True
+
+                    # Price might not be available and the company might need to be contacted.
+                    if product['price'] == 'お問い合わせ':
+                        price = None
+                    else:
+                        price = int(product['price'].replace(',',''))
+
+                    products.append({'code' : code[i],
+                                     'amount' : amount,
+                                     'unit' : unit,
+                                     'price' : price,
+                                     'stock_japan' : stock_japan,
+                                     'aprox_delivery_time' : delivery_time,
+                                     'special_remarks' : None})
+
         except ValueError:
-            #print(f'WARNING ValueError: Check product {code[j]}, ', product)
+            print(f'WARNING ValueError: Check compound {code[i]}, ', compound)
             pass
         except TypeError:
-            #print(f'WARNING TypeError: Check product {code[j]}, ', lst[j][code[j]])
+            print(f'WARNING TypeError: Check compound {code[i]}, ', compound[code[i]])
             pass
         except IndexError:
-            #print(f'WARNING IndexError: Check product {code[j]}, ', product)
+            print(f'WARNING IndexError: Check compound {code[i]}, ', compound)
             pass
         except KeyError:
-            #print(f'WARNING KeyError: Check product {code[j]}, ', product)
+            print(f'WARNING KeyError: Check compound {code[i]}, ', compound)
             pass
 
     products_df = pd.DataFrame(products)
-    products_df.index = products_df['code']
-    products_df.drop(['code'], axis=1, inplace=True)
     return products_df
 
 
@@ -96,13 +115,13 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    num = len(entry)
-    code = get_unique_code(entry, num)
-    df_prod = get_available_products(entry, num, code)
-    print(df_prod.sample(20))
-    '''df = get_smiles(entry,num,code)
+    products_list = entry[30:40]
+    code = get_unique_code(products_list)
+    df_prod = get_available_products(products_list, code)
+    print(df_prod)
+    '''df = get_smiles(products_list,num,code)
     print(df.info())
-    print('original dataset : ', len(entry),
+    print('original dataset : ', len(products_list),
           'available products : ', len(df_prod),
           'smiles dataset : ', len(df))
     '''
