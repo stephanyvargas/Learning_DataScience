@@ -5,11 +5,11 @@ import json
 import re
 
 def get_cansmi(smi):
-    '''Input a smiles String and tranform it to an RDKit smiles'''
-        try:
-            return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
-        except:
-            return None
+    '''Input a Smiles String and tranform it to an RDKit'''
+    try:
+        return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
+    except:
+        return None
 
 def get_duplicates(lst):
     #check for repeated elements
@@ -39,15 +39,16 @@ def get_available_products(lst, code):
             # Get warnings from the company regarding products
             if hasattr(compound[code[i]]['Available_products'], 'get'):
                 warning = compound[code[i]]['Available_products'].get('WARNING')
-                title = compound[code[i]]['Metadata'].get('title')
-                url = compound[code[i]].get('url')
-                na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : warning})
+                if warning:
+                    title = compound[code[i]]['Metadata'].get('title')
+                    url = compound[code[i]].get('url')
+                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : warning})
+                else: pass
 
             elif compound[code[i]]['Available_products'] == None:
                 side_note = compound[code[i]].get('Side Note')
                 note = side_note.get('WARNING')
                 maybe_available = side_note.get('Note')
-
                 if maybe_available:
                     # This product may be packaged on demand. Need to contact company directly for information.
                     products.append({'index' : i,
@@ -71,10 +72,6 @@ def get_available_products(lst, code):
                                      'aprox_delivery_time' : None,
                                      'special_remarks' : 'Price and availability are currently unavailable'})
 
-
-                title = compound[code[i]]['Metadata'].get('title')
-                url = compound[code[i]].get('url')
-                na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'note' : note})
 
             else:
                 for product in compound[code[i]]['Available_products']:
@@ -148,7 +145,7 @@ def get_available_products(lst, code):
 
     products_df = pd.DataFrame(products)
     na_products_df = pd.DataFrame(na_products)
-    return products_df, na_products_df
+    return products_df.drop_duplicates(), na_products_df.drop_duplicates()
 
 
 def get_smiles(lst,how_many,code):
@@ -174,12 +171,16 @@ def main():
     #errors = 1857,1853,1858,1860,1871
     products_list = entry#[60000:]#[12070:12080]
     code = get_unique_code(products_list)
+
+    # Check that there are no repeated products
+    unique_code = list(set(code))
     #get_available_products(products_list, code)
     df_prod, df_naproduct = get_available_products(products_list, code)
-    print(df_prod)
+    print(df_prod.sample(20))
     print(df_prod.info())
-    print(df_prod.aprox_delivery_time.unique())
-    #print(df_naproduct)
+    #print(df_prod.aprox_delivery_time.unique())
+    print(df_naproduct)
+    print(f'scraped data: {len(code)}, number of unique codes: {len(unique_code)}')
     '''df = get_smiles(products_list,num,code)
     print(df.info())
     print('original dataset : ', len(products_list),
