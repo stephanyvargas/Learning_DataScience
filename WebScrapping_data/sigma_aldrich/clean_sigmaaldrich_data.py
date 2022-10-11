@@ -5,6 +5,7 @@ import json
 import re
 
 def get_cansmi(smi):
+    '''Input a smiles String and tranform it to an RDKit smiles'''
         try:
             return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
         except:
@@ -59,7 +60,7 @@ def get_available_products(lst, code):
                                      'special_remarks' : maybe_available})
 
 
-                elif ('現在、価格および在庫状況を閲覧できません' in note) or ('Pricing and availability is not currently available' in note):
+                elif ('現在、価格および在庫状況を閲覧できません' in note) or ('not currently available' in note):
                     # Need to contact company directly for information.
                     products.append({'index' : i,
                                      'code' : code[i],
@@ -68,7 +69,7 @@ def get_available_products(lst, code):
                                      'price' : None,
                                      'stock_japan' : None,
                                      'aprox_delivery_time' : None,
-                                     'special_remarks' : note})
+                                     'special_remarks' : 'Price and availability are currently unavailable'})
 
 
                 title = compound[code[i]]['Metadata'].get('title')
@@ -171,13 +172,13 @@ def main():
         entry = json.load(data_f)
 
     #errors = 1857,1853,1858,1860,1871
-    products_list = entry[60000:]#[12070:12080]
+    products_list = entry#[60000:]#[12070:12080]
     code = get_unique_code(products_list)
     #get_available_products(products_list, code)
     df_prod, df_naproduct = get_available_products(products_list, code)
     print(df_prod)
     print(df_prod.info())
-    print(df_prod.special_remarks.unique())
+    print(df_prod.aprox_delivery_time.unique())
     #print(df_naproduct)
     '''df = get_smiles(products_list,num,code)
     print(df.info())
