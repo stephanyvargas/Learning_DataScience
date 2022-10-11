@@ -57,7 +57,7 @@ def get_available_products(lst, code):
                                      'stock_japan' : None,
                                      'aprox_delivery_time' : None,
                                      'special_remarks' : maybe_available})
-                    pass
+
 
                 elif ('現在、価格および在庫状況を閲覧できません' in note) or ('Pricing and availability is not currently available' in note):
                     # Need to contact company directly for information.
@@ -69,16 +69,16 @@ def get_available_products(lst, code):
                                      'stock_japan' : None,
                                      'aprox_delivery_time' : None,
                                      'special_remarks' : note})
-                    pass
+                    
 
                 title = compound[code[i]]['Metadata'].get('title')
                 url = compound[code[i]].get('url')
                 na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'note' : note})
-            '''
-            else:
-                for product in compound[code[i]]['Available_products']:
-                    # Check if there are any special notes on the product
 
+            else:
+                for j, product in enumerate(compound[code[i]]['Available_products']):
+
+                    # Check if there are any special notes on the product
                     note = product.get('note')
                     if note and (note[-1] == '0'):
                         note == None
@@ -92,29 +92,40 @@ def get_available_products(lst, code):
                         amount, unit = None, None
 
                     # Check if there are products that need to be shipped from USA
-                    delivery_time = product['shipment']
+                    delivery_time = product.get('shipment')
                     if '申し訳ございませんが、この製品のフルフィルメントと配送が遅延しています。' in delivery_time:
                         delivery_time = 'Delayed'
-                    if ('Orders outside of US' in delivery_time) or ('米国および欧州外の注文の場合' in delivery_time):
+                    elif ('Orders outside of US' in delivery_time) or ('米国および欧州外の注文の場合' in delivery_time):
                         stock_japan = False
-                    else:
+                        delivery_time = 'Delivered from the US, may take several weeks.'
+                    elif delivery_time:
                         stock_japan = True
+                    else:
+                        stock_japan = False
 
                     # Price might not be available and the company might need to be contacted.
-                    if product['price'] == 'お問い合わせ':
+                    if (product.get('price') == 'お問い合わせ') or not product.get('price'):
                         price = None
                     else:
                         price = int(product['price'].replace(',',''))
 
-                    products.append({'index' : i,
-                                     'code' : code[i],
-                                     'amount' : amount,
-                                     'unit' : unit,
-                                     'price' : price,
-                                     'stock_japan' : stock_japan,
-                                     'aprox_delivery_time' : delivery_time,
-                                     'special_remarks' : note})
-                    '''
+                    # Error from the scraping algorithm, same product, same units and amount mixed.
+                    if (delivery_time[-1] == '0') or (',' in delivery_time) and not products[-1].get('price'):
+                        print('last product: ', products[-1])
+                        print('current product: ', product)
+                        products[-1]['price'] = int(delivery_time.replace(',','')[1:])
+                        print('last -1 price: ', products[-1]['price'])# = int(delivery_time.replace(',',''))
+
+                    else:
+                        products.append({'index' : i,
+                                         'code' : code[i],
+                                         'amount' : amount,
+                                         'unit' : unit,
+                                         'price' : price,
+                                         'stock_japan' : stock_japan,
+                                         'aprox_delivery_time' : delivery_time,
+                                         'special_remarks' : note})
+
         except ValueError:
             print(i, code[i])
             print(f'WARNING ValueError: Check compound {code[i]}, ', compound)
@@ -132,9 +143,9 @@ def get_available_products(lst, code):
             print(f'WARNING KeyError: Check compound {code[i]}, ', compound)
             pass
 
-    #products_df = pd.DataFrame(products)
-    #na_products_df = pd.DataFrame(na_products)
-    #return products_df, na_products_df
+    products_df = pd.DataFrame(products)
+    na_products_df = pd.DataFrame(na_products)
+    return products_df, na_products_df
 
 
 def get_smiles(lst,how_many,code):
@@ -157,11 +168,11 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry[12070:12080]
+    products_list = entry#[12070:12080]
     code = get_unique_code(products_list)
-    get_available_products(products_list, code)
-    #df_prod, df_naproduct = get_available_products(products_list, code)
-    #print(df_prod)
+    #get_available_products(products_list, code)
+    df_prod, df_naproduct = get_available_products(products_list, code)
+    print(df_prod)
     #print(df_naproduct.note.unique())
     '''df = get_smiles(products_list,num,code)
     print(df.info())
