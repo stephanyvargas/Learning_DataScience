@@ -43,7 +43,8 @@ def get_available_products(lst, code):
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
                     na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : warning})
-                else: pass
+                else:
+                    pass
 
             elif compound[code[i]]['Available_products'] == None:
                 side_note = compound[code[i]].get('Side Note')
@@ -60,6 +61,21 @@ def get_available_products(lst, code):
                                      'aprox_delivery_time' : None,
                                      'special_remarks' : maybe_available})
 
+                elif ('discontinued' in note) or ('現在お客様の国では販売されていません' in note):
+                    title = compound[code[i]]['Metadata'].get('title')
+                    url = compound[code[i]].get('url')
+                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
+
+                elif ('not available for purchase' in note):# or ('現在お客様の国では販売されていません' in note):
+                    title = compound[code[i]]['Metadata'].get('title')
+                    url = compound[code[i]].get('url')
+                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
+
+                elif ('not be available in Japan' in note):# or ('現在お客様の国では販売されていません' in note):
+                    title = compound[code[i]]['Metadata'].get('title')
+                    url = compound[code[i]].get('url')
+                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
+
 
                 elif ('現在、価格および在庫状況を閲覧できません' in note) or ('not currently available' in note):
                     # Need to contact company directly for information.
@@ -71,7 +87,8 @@ def get_available_products(lst, code):
                                      'stock_japan' : None,
                                      'aprox_delivery_time' : None,
                                      'special_remarks' : 'Price and availability are currently unavailable'})
-
+                else:
+                    print(compound[code[i]])
 
             else:
                 for product in compound[code[i]]['Available_products']:
@@ -117,14 +134,19 @@ def get_available_products(lst, code):
                         print('last -1 price: ', products[-1]['price'])
 
                     else:
-                        products.append({'index' : i,
-                                         'code' : code[i],
-                                         'amount' : amount,
-                                         'unit' : unit,
-                                         'price' : price,
-                                         'stock_japan' : stock_japan,
-                                         'aprox_delivery_time' : delivery_time,
-                                         'special_remarks' : note})
+                        note_warning = compound[code[i]].get('Side Note')
+                        if note_warning and (('discontinued' in note_warning) or \
+                                             ('現在お客様の国では販売されていません' in note_warning)):
+                            pass
+                        else:
+                            products.append({'index' : i,
+                                            'code' : code[i],
+                                            'amount' : amount,
+                                            'unit' : unit,
+                                            'price' : price,
+                                            'stock_japan' : stock_japan,
+                                            'aprox_delivery_time' : delivery_time,
+                                            'special_remarks' : note})
 
         except ValueError:
             print(i, code[i])
@@ -168,19 +190,19 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    #errors = 1857,1853,1858,1860,1871
-    products_list = entry#[60000:]#[12070:12080]
+    products_list = entry
     code = get_unique_code(products_list)
 
-    # Check that there are no repeated products
-    unique_code = list(set(code))
-    #get_available_products(products_list, code)
-    df_prod, df_naproduct = get_available_products(products_list, code)
-    print(df_prod.sample(20))
-    print(df_prod.info())
-    #print(df_prod.aprox_delivery_time.unique())
-    print(df_naproduct)
-    print(f'scraped data: {len(code)}, number of unique codes: {len(unique_code)}')
+    build_available_table = True
+    if build_available_table:
+        df_prod, df_naproduct = get_available_products(products_list, code)
+        print(df_prod.sample(20))
+        print(df_prod.info())
+        #print(df_prod.aprox_delivery_time.unique())
+        print(df_naproduct)
+        print(f'scraped data: {len(code)}, number of unique codes: {len(set(code))}, database unique codes: {len(df_prod.code.unique())}')
+
+
     '''df = get_smiles(products_list,num,code)
     print(df.info())
     print('original dataset : ', len(products_list),
