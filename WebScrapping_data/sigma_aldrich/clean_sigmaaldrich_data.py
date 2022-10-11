@@ -48,7 +48,7 @@ def get_available_products(lst, code):
                 maybe_available = side_note.get('Note')
 
                 if maybe_available:
-                    # This product can be packaged on demand. Need to contact company directly.
+                    # This product may be packaged on demand. Need to contact company directly for information.
                     products.append({'index' : i,
                                      'code' : code[i],
                                      'amount' : None,
@@ -69,19 +69,21 @@ def get_available_products(lst, code):
                                      'stock_japan' : None,
                                      'aprox_delivery_time' : None,
                                      'special_remarks' : note})
-                    
+
 
                 title = compound[code[i]]['Metadata'].get('title')
                 url = compound[code[i]].get('url')
                 na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'note' : note})
 
             else:
-                for j, product in enumerate(compound[code[i]]['Available_products']):
+                for product in compound[code[i]]['Available_products']:
 
                     # Check if there are any special notes on the product
-                    note = product.get('note')
-                    if note and (note[-1] == '0'):
-                        note == None
+                    remarks = product.get('note')
+                    if remarks and (remarks[-1] == '0') and (',' in remarks):
+                        note = None
+                    else:
+                        note = remarks
 
                     # Get the quatity and the units of the product.
                     quantity = re.findall(r'\d+',product['ID - quatity'])
@@ -97,7 +99,7 @@ def get_available_products(lst, code):
                         delivery_time = 'Delayed'
                     elif ('Orders outside of US' in delivery_time) or ('米国および欧州外の注文の場合' in delivery_time):
                         stock_japan = False
-                        delivery_time = 'Delivered from the US, may take several weeks.'
+                        delivery_time = 'Shipped from the USA, may take several weeks.'
                     elif delivery_time:
                         stock_japan = True
                     else:
@@ -110,11 +112,11 @@ def get_available_products(lst, code):
                         price = int(product['price'].replace(',',''))
 
                     # Error from the scraping algorithm, same product, same units and amount mixed.
-                    if (delivery_time[-1] == '0') or (',' in delivery_time) and not products[-1].get('price'):
+                    if (i>0) and (delivery_time[-1] == '0') and (',' in delivery_time) and not products[-1].get('price'):
                         print('last product: ', products[-1])
                         print('current product: ', product)
                         products[-1]['price'] = int(delivery_time.replace(',','')[1:])
-                        print('last -1 price: ', products[-1]['price'])# = int(delivery_time.replace(',',''))
+                        print('last -1 price: ', products[-1]['price'])
 
                     else:
                         products.append({'index' : i,
@@ -168,12 +170,15 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry#[12070:12080]
+    #errors = 1857,1853,1858,1860,1871
+    products_list = entry[60000:]#[12070:12080]
     code = get_unique_code(products_list)
     #get_available_products(products_list, code)
     df_prod, df_naproduct = get_available_products(products_list, code)
     print(df_prod)
-    #print(df_naproduct.note.unique())
+    print(df_prod.info())
+    print(df_prod.special_remarks.unique())
+    #print(df_naproduct)
     '''df = get_smiles(products_list,num,code)
     print(df.info())
     print('original dataset : ', len(products_list),
