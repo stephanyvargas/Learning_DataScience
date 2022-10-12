@@ -18,7 +18,7 @@ def get_available_products(lst, code):
                 if warning:
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : warning})
+                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : warning, 'url' : url})
                 else:
                     pass
 
@@ -41,17 +41,17 @@ def get_available_products(lst, code):
                 elif ('discontinued' in note) or ('現在お客様の国では販売されていません' in note):
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
+                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
 
                 elif ('not available for purchase' in note):
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
+                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
 
                 elif ('not be available in Japan' in note):
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
+                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
 
                 elif ('現在、価格および在庫状況を閲覧できません' in note) or ('not currently available' in note):
                     # Need to contact company directly for information.
@@ -104,10 +104,10 @@ def get_available_products(lst, code):
 
                     # Error from the scraping algorithm, same product, same units and amount mixed.
                     if (i>0) and (delivery_time[-1] == '0') and (',' in delivery_time) and not products[-1].get('price'):
-                        print('last product: ', products[-1])
-                        print('current product: ', product)
+                        #print('last product: ', products[-1])
+                        #print('current product: ', product)
                         products[-1]['price'] = int(delivery_time.replace(',','')[1:])
-                        print('last -1 price: ', products[-1]['price'])
+                        #print('last -1 price: ', products[-1]['price'])
 
                     else:
                         note_warning = compound[code[i]].get('Side Note')
