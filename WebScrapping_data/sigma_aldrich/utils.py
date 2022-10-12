@@ -18,7 +18,7 @@ def get_available_products(lst, code):
                 if warning:
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : warning, 'url' : url})
+                    na_products.append({'idx' : i, 'code' : code[i], 'title' : title, 'warning' : warning, 'url' : url})
                 else:
                     pass
 
@@ -28,7 +28,7 @@ def get_available_products(lst, code):
                 maybe_available = side_note.get('Note')
                 if maybe_available:
                     # This product may be packaged on demand. Need to contact company directly for information.
-                    products.append({'index' : i,
+                    products.append({'idx' : i,
                                      'code' : code[i],
                                      'amount' : None,
                                      'unit' : None,
@@ -41,21 +41,21 @@ def get_available_products(lst, code):
                 elif ('discontinued' in note) or ('現在お客様の国では販売されていません' in note):
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
+                    na_products.append({'idx' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
 
                 elif ('not available for purchase' in note):
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
+                    na_products.append({'idx' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
 
                 elif ('not be available in Japan' in note):
                     title = compound[code[i]]['Metadata'].get('title')
                     url = compound[code[i]].get('url')
-                    na_products.append({'index' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
+                    na_products.append({'idx' : i, 'code' : code[i], 'title' : title, 'warning' : note, 'url' : url})
 
                 elif ('現在、価格および在庫状況を閲覧できません' in note) or ('not currently available' in note):
                     # Need to contact company directly for information.
-                    products.append({'index' : i,
+                    products.append({'idx' : i,
                                      'code' : code[i],
                                      'amount' : None,
                                      'unit' : None,
@@ -115,7 +115,7 @@ def get_available_products(lst, code):
                                              ('現在お客様の国では販売されていません' in note_warning)):
                             pass
                         else:
-                            products.append({'index' : i,
+                            products.append({'idx' : i,
                                             'code' : code[i],
                                             'amount' : amount,
                                             'unit' : unit,
