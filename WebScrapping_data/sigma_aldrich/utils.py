@@ -1,6 +1,12 @@
 import pandas as pd
 import re
 
+def get_unique_code(lst):
+    code =[]
+    for value in lst:
+        code.append(list(value.keys())[0])
+    return code
+
 def get_available_products(lst, code):
     products = []
     na_products = []
