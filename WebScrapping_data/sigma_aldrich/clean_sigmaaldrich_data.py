@@ -3,27 +3,24 @@ from rdkit import Chem
 from utils import get_available_products, get_unique_code
 import pprint
 import json
-import re
+
 
 def get_cansmi(smi):
     '''Input a Smiles String and tranform it to an RDKit'''
     try:
         return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
     except:
-        print(smi)
         return 'Error'
 
-def get_duplicates(lst):
-    #check for repeated elements
-    newlist = []
-    duplist = []
-    for n, i in enumerate(lst):
-        if i not in newlist:
-            newlist.append(i)
-        else:
-            duplist.append(i)
-            print('repeated element index:', n, 'url:', i)
-            return duplist
+
+def get_attribute_list(lst,code):
+    attr_list = []
+    for i, compound in enumerate(lst):
+        for attribute in lst[i][code[i]]['attributes']:
+            if attribute['key'] not in attr_list:
+                attr_list.append(attribute['key'])
+            else: pass
+    return attr_list
 
 
 def get_smiles(lst,code):
@@ -32,16 +29,16 @@ def get_smiles(lst,code):
         for attribute in lst[i][code[i]]['attributes']:
             if attribute['key'] == 'smiles string':
                 smile_string = attribute['values'][0]
-                smile_rdkit = None
                 smiles.append({'code' : code[i],
                                'sigma_aldrich_smiles' : smile_string,
-                               'rdkit_smiles' : smile_rdkit})
+                               'rdkit_smiles' : None})
+
     smiles_df = pd.DataFrame(smiles)
-    smiles_df.index = smiles_df['code']
     smiles_df['rdkit_smiles'] = smiles_df.sigma_aldrich_smiles.apply(get_cansmi)
-    smiles_df.drop(['code'], axis=1, inplace=True)
-    print(smiles_df[smiles_df.rdkit_smiles == 'Error'])
+    smiles_df.drop(['sigma_aldrich_smiles'], axis=1, inplace=True)
+    error_df = smiles_df[smiles_df.rdkit_smiles == 'Error']
     return smiles_df
+
 
 def print_table(df, sample=None, check_column=None):
     if sample:
@@ -81,16 +78,18 @@ def main():
     code = delete_unavailable_products(code, df_naproduct.idx)
     products_list = delete_unavailable_products(products_list, df_naproduct.idx)
 
+
     # Get the smiles for RDkit conversion
     print('smiles next')
-    df = get_smiles(products_list,code)
+    df_smiles = get_smiles(products_list,code)
+    print_table(df_smiles)
+    print('Products list: ', len(products_list))
+    print('Smiles from sigma aldrich: ', len(df_smiles))
+    print('Missing smiles representation: ', len(products_list) - len(df_smiles))
 
-    #print(df.info())
-    '''print(df.info())
-    print('original dataset : ', len(products_list),
-          'available products : ', len(df_prod),
-          'smiles dataset : ', len(df))
-    '''
+
+    # get available attributes
+    #get_attribute_list(products_list,code)
 
 if __name__ == "__main__":
     main()
