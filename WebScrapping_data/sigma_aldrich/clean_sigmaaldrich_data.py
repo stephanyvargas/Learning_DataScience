@@ -23,10 +23,10 @@ def get_attribute_list(lst,code):
             else: pass
     return attr_list
 
-def save_smiles_txt(df, directory==None, name):
+def save_smiles_txt(df, name, directory=None):
     if directory == None:
         directory = ''
-    if directory and directory[-1] != '/'
+    if directory and directory[-1] != '/':
         directory += '/'
     else: pass
     np.savetxt(f'{directory}{name}.txt', df.values, fmt='%s', delimiter=' ')
