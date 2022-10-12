@@ -1,5 +1,6 @@
 import pandas as pd
 from rdkit import Chem
+from utils import get_available_products
 import pprint
 import json
 import re
@@ -9,7 +10,8 @@ def get_cansmi(smi):
     try:
         return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
     except:
-        return None
+        print(smi)
+        return None#'Error'
 
 def get_duplicates(lst):
     #check for repeated elements
@@ -31,148 +33,9 @@ def get_unique_code(lst):
     return code
 
 
-def get_available_products(lst, code):
-    products = []
-    na_products = []
-    for i, compound in enumerate(lst):
-        try:
-            # Get warnings from the company regarding products
-            if hasattr(compound[code[i]]['Available_products'], 'get'):
-                warning = compound[code[i]]['Available_products'].get('WARNING')
-                if warning:
-                    title = compound[code[i]]['Metadata'].get('title')
-                    url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : warning})
-                else:
-                    pass
-
-            elif compound[code[i]]['Available_products'] == None:
-                side_note = compound[code[i]].get('Side Note')
-                note = side_note.get('WARNING')
-                maybe_available = side_note.get('Note')
-                if maybe_available:
-                    # This product may be packaged on demand. Need to contact company directly for information.
-                    products.append({'index' : i,
-                                     'code' : code[i],
-                                     'amount' : None,
-                                     'unit' : None,
-                                     'price' : None,
-                                     'stock_japan' : None,
-                                     'aprox_delivery_time' : None,
-                                     'special_remarks' : maybe_available})
-
-                elif ('discontinued' in note) or ('現在お客様の国では販売されていません' in note):
-                    title = compound[code[i]]['Metadata'].get('title')
-                    url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
-
-                elif ('not available for purchase' in note):# or ('現在お客様の国では販売されていません' in note):
-                    title = compound[code[i]]['Metadata'].get('title')
-                    url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
-
-                elif ('not be available in Japan' in note):# or ('現在お客様の国では販売されていません' in note):
-                    title = compound[code[i]]['Metadata'].get('title')
-                    url = compound[code[i]].get('url')
-                    na_products.append({'code' : code[i], 'title' : title, 'url' : url, 'warning' : note})
-
-
-                elif ('現在、価格および在庫状況を閲覧できません' in note) or ('not currently available' in note):
-                    # Need to contact company directly for information.
-                    products.append({'index' : i,
-                                     'code' : code[i],
-                                     'amount' : None,
-                                     'unit' : None,
-                                     'price' : None,
-                                     'stock_japan' : None,
-                                     'aprox_delivery_time' : None,
-                                     'special_remarks' : 'Price and availability are currently unavailable'})
-                else:
-                    print(compound[code[i]])
-
-            else:
-                for product in compound[code[i]]['Available_products']:
-
-                    # Check if there are any special notes on the product
-                    remarks = product.get('note')
-                    if remarks and (remarks[-1] == '0') and (',' in remarks):
-                        note = None
-                    else:
-                        note = remarks
-
-                    # Get the quatity and the units of the product.
-                    quantity = re.findall(r'\d+',product['ID - quatity'])
-                    if quantity and len(quantity) <= 5:
-                        amount = quantity[-1]
-                        unit = product['ID - quatity'].split(amount)[-1].strip()
-                    else:
-                        amount, unit = None, None
-
-                    # Check if there are products that need to be shipped from USA
-                    delivery_time = product.get('shipment')
-                    if '申し訳ございませんが、この製品のフルフィルメントと配送が遅延しています。' in delivery_time:
-                        delivery_time = 'Delayed'
-                    elif ('Orders outside of US' in delivery_time) or ('米国および欧州外の注文の場合' in delivery_time):
-                        stock_japan = False
-                        delivery_time = 'Shipped from the USA, may take several weeks.'
-                    elif delivery_time:
-                        stock_japan = True
-                    else:
-                        stock_japan = False
-
-                    # Price might not be available and the company might need to be contacted.
-                    if (product.get('price') == 'お問い合わせ') or not product.get('price'):
-                        price = None
-                    else:
-                        price = int(product['price'].replace(',',''))
-
-                    # Error from the scraping algorithm, same product, same units and amount mixed.
-                    if (i>0) and (delivery_time[-1] == '0') and (',' in delivery_time) and not products[-1].get('price'):
-                        print('last product: ', products[-1])
-                        print('current product: ', product)
-                        products[-1]['price'] = int(delivery_time.replace(',','')[1:])
-                        print('last -1 price: ', products[-1]['price'])
-
-                    else:
-                        note_warning = compound[code[i]].get('Side Note')
-                        if note_warning and (('discontinued' in note_warning) or \
-                                             ('現在お客様の国では販売されていません' in note_warning)):
-                            pass
-                        else:
-                            products.append({'index' : i,
-                                            'code' : code[i],
-                                            'amount' : amount,
-                                            'unit' : unit,
-                                            'price' : price,
-                                            'stock_japan' : stock_japan,
-                                            'aprox_delivery_time' : delivery_time,
-                                            'special_remarks' : note})
-
-        except ValueError:
-            print(i, code[i])
-            print(f'WARNING ValueError: Check compound {code[i]}, ', compound)
-            pass
-        except TypeError:
-            print(i, code[i])
-            print(f'WARNING TypeError: Check compound {code[i]}, ', compound)
-            pass
-        except IndexError:
-            print(i, code[i])
-            print(f'WARNING IndexError: Check compound {code[i]}, ', compound)
-            pass
-        except KeyError:
-            print(i, code[i])
-            print(f'WARNING KeyError: Check compound {code[i]}, ', compound)
-            pass
-
-    products_df = pd.DataFrame(products)
-    na_products_df = pd.DataFrame(na_products)
-    return products_df.drop_duplicates(), na_products_df.drop_duplicates()
-
-
-def get_smiles(lst,how_many,code):
+def get_smiles(lst,code):
     smiles = []
-    for i in range(how_many):
+    for i, compound in enumerate(lst):
         for attribute in lst[i][code[i]]['attributes']:
             if attribute['key'] == 'smiles string':
                 smile_string = attribute['values'][0]
@@ -184,27 +47,32 @@ def get_smiles(lst,how_many,code):
     smiles_df.index = smiles_df['code']
     smiles_df['rdkit_smiles'] = smiles_df.sigma_aldrich_smiles.apply(get_cansmi)
     smiles_df.drop(['code'], axis=1, inplace=True)
+    #print(smiles_df[smiles_df.rdkit_smiles == 'Error'])
     return smiles_df
 
 def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry
+    products_list = entry#[:1000]
     code = get_unique_code(products_list)
 
-    build_available_table = True
-    if build_available_table:
-        df_prod, df_naproduct = get_available_products(products_list, code)
+    # Build availability table
+    #df_prod, df_naproduct = get_available_products(products_list, code)
+    print_available_table = False
+    if print_available_table:
         print(df_prod.sample(20))
         print(df_prod.info())
-        #print(df_prod.aprox_delivery_time.unique())
         print(df_naproduct)
+        print(df_prod.special_remarks.unique())
         print(f'scraped data: {len(code)}, number of unique codes: {len(set(code))}, database unique codes: {len(df_prod.code.unique())}')
 
-
-    '''df = get_smiles(products_list,num,code)
+    # Get the smiles for RDkit conversion
+    # --------> filter out the df_naproducts
+    print('smiles next')
+    df = get_smiles(products_list,code)
     print(df.info())
+    '''print(df.info())
     print('original dataset : ', len(products_list),
           'available products : ', len(df_prod),
           'smiles dataset : ', len(df))
@@ -213,16 +81,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-#get_duplicates(lst)
-##if there are duplicates, eliminate through:
-#with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
-#    entry = json.load(data_f)
-#    del entry[3] ##change IT to n!!!!!!
-#    data_f.seek(0)
-#    json.dump(entry, data_f, sort_keys=True, indent=4)
