@@ -3,6 +3,7 @@ from rdkit import Chem
 from utils import get_available_products, get_unique_code
 import pprint
 import json
+import numpy as np
 
 
 def get_cansmi(smi):
@@ -22,6 +23,14 @@ def get_attribute_list(lst,code):
             else: pass
     return attr_list
 
+def save_smiles_txt(df, directory==None, name):
+    if directory == None:
+        directory = ''
+    if directory and directory[-1] != '/'
+        directory += '/'
+    else: pass
+    np.savetxt(f'{directory}{name}.txt', df.values, fmt='%s', delimiter=' ')
+
 
 def get_smiles(lst,code):
     smiles = []
@@ -35,9 +44,8 @@ def get_smiles(lst,code):
 
     smiles_df = pd.DataFrame(smiles)
     smiles_df['rdkit_smiles'] = smiles_df.sigma_aldrich_smiles.apply(get_cansmi)
-    smiles_df.drop(['sigma_aldrich_smiles'], axis=1, inplace=True)
     error_df = smiles_df[smiles_df.rdkit_smiles == 'Error']
-    return smiles_df
+    return smiles_df, error_df
 
 
 def print_table(df, sample=None, check_column=None):
@@ -71,6 +79,7 @@ def main():
     # Build availability table
     df_prod, df_naproduct = get_available_products(products_list, code)
     #print_table(df_prod, sample=20, check_column='special_remarks')
+    #print_table(df_naproduct)
     #print(f'''scraped data: {len(code)}, number of unique codes: {len(set(code))}, database unique codes: {len(df_prod.code.unique())}''')
 
 
@@ -81,8 +90,11 @@ def main():
 
     # Get the smiles for RDkit conversion
     print('smiles next')
-    df_smiles = get_smiles(products_list,code)
-    print_table(df_smiles)
+    df_smiles, df_smiles_error = get_smiles(products_list,code)
+    save_smiles_txt(df_smiles, 'sigma_aldrich')
+    print_table(df_smiles, sample=20)
+    print_table(df_smiles_error)
+
     print('Products list: ', len(products_list))
     print('Smiles from sigma aldrich: ', len(df_smiles))
     print('Missing smiles representation: ', len(products_list) - len(df_smiles))
