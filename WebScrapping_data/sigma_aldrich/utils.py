@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import pandas as pd
 import re
 
@@ -10,7 +11,8 @@ def get_unique_code(lst):
 def get_available_products(lst, code):
     products = []
     na_products = []
-    for i, compound in enumerate(lst):
+    print('-- Getting products availability table -- ')
+    for i, compound in tqdm(enumerate(lst)):
         try:
             # Get warnings from the company regarding products
             if hasattr(compound[code[i]]['Available_products'], 'get'):
