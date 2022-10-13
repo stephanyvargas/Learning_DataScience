@@ -1,3 +1,4 @@
+from rdkit import Chem
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
