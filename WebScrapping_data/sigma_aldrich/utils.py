@@ -4,6 +4,13 @@ import numpy as np
 import pandas as pd
 import re
 
+def delete_unavailable_products(code, lst):
+    for i, _ in enumerate(code):
+        if i in lst:
+            del code[i]
+    return code
+
+
 def get_cansmi(smi):
     '''Input a Smiles String and tranform it to an RDKit'''
     try:
