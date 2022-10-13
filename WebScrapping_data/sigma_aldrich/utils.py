@@ -1,6 +1,38 @@
 from tqdm import tqdm
+import numpy as np
 import pandas as pd
 import re
+
+def get_cansmi(smi):
+    '''Input a Smiles String and tranform it to an RDKit'''
+    try:
+        return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
+    except:
+        return 'Error'
+
+def save_smiles_txt(df, name, directory=None):
+    if directory == None:
+        directory = ''
+    if directory and directory[-1] != '/':
+        directory += '/'
+    else: pass
+    np.savetxt(f'{directory}{name}.txt', df.values, fmt='%s', delimiter=' ')
+
+
+def get_smiles(lst,code):
+    smiles = []
+    for i, compound in enumerate(lst):
+        for attribute in lst[i][code[i]]['attributes']:
+            if attribute['key'] == 'smiles string':
+                smile_string = attribute['values'][0]
+                smiles.append({'code' : code[i],
+                               'sigma_aldrich_smiles' : smile_string,
+                               'rdkit_smiles' : None})
+
+    smiles_df = pd.DataFrame(smiles)
+    smiles_df['rdkit_smiles'] = smiles_df.sigma_aldrich_smiles.apply(get_cansmi)
+    error_df = smiles_df[smiles_df.rdkit_smiles == 'Error']
+    return smiles_df, error_df
 
 def get_unique_code(lst):
     code =[]
