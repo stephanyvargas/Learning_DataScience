@@ -91,7 +91,7 @@ def main():
     # Get the smiles for RDkit conversion
     print('smiles next')
     df_smiles, df_smiles_error = get_smiles(products_list,code)
-    save_smiles_txt(df_smiles, 'sigma_aldrich')
+    save_smiles_txt(df_smiles[['code', 'rdkit_smiles']], 'sigma_aldrich')
     print_table(df_smiles, sample=20)
     print_table(df_smiles_error)
 
