@@ -26,7 +26,7 @@ def save_smiles_txt(df, name, directory=None):
     np.savetxt(f'{directory}{name}.txt', df.values, fmt='%s', delimiter=' ')
 
 
-def get_smiles(lst,code):
+def get_smiles(lst,code, save_output=False, name='name'):
     smiles = []
     for i, compound in enumerate(lst):
         for attribute in lst[i][code[i]]['attributes']:
@@ -35,6 +35,9 @@ def get_smiles(lst,code):
                 smiles.append({'code' : code[i],
                                'sigma_aldrich_smiles' : smile_string,
                                'rdkit_smiles' : None})
+
+    if save_output:
+        save_smiles_txt(df_smiles[['code', 'rdkit_smiles']], name)
 
     smiles_df = pd.DataFrame(smiles)
     smiles_df['rdkit_smiles'] = smiles_df.sigma_aldrich_smiles.apply(get_cansmi)
