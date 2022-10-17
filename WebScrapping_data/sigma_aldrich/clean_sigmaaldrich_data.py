@@ -1,17 +1,8 @@
 import pandas as pd
-from rdkit import Chem
 from utils import get_available_products, get_unique_code
-import pprint
+from utils import get_smiles, save_smiles_txt
+from utils import delete_unavailable_products
 import json
-import numpy as np
-
-
-def get_cansmi(smi):
-    '''Input a Smiles String and tranform it to an RDKit'''
-    try:
-        return Chem.MolToSmiles(Chem.MolFromSmiles(smi), canonical=True)
-    except:
-        return 'Error'
 
 
 def get_attribute_list(lst,code):
@@ -23,29 +14,15 @@ def get_attribute_list(lst,code):
             else: pass
     return attr_list
 
-def save_smiles_txt(df, name, directory=None):
+
+def save_df_json(df, name, directory=None):
     if directory == None:
         directory = ''
     if directory and directory[-1] != '/':
         directory += '/'
     else: pass
-    np.savetxt(f'{directory}{name}.txt', df.values, fmt='%s', delimiter=' ')
-
-
-def get_smiles(lst,code):
-    smiles = []
-    for i, compound in enumerate(lst):
-        for attribute in lst[i][code[i]]['attributes']:
-            if attribute['key'] == 'smiles string':
-                smile_string = attribute['values'][0]
-                smiles.append({'code' : code[i],
-                               'sigma_aldrich_smiles' : smile_string,
-                               'rdkit_smiles' : None})
-
-    smiles_df = pd.DataFrame(smiles)
-    smiles_df['rdkit_smiles'] = smiles_df.sigma_aldrich_smiles.apply(get_cansmi)
-    error_df = smiles_df[smiles_df.rdkit_smiles == 'Error']
-    return smiles_df, error_df
+    path = f'{directory}{name}.json'
+    df.to_json(path, orient = 'split', compression = 'infer', index = 'true')
 
 
 def print_table(df, sample=None, check_column=None):
@@ -58,19 +35,13 @@ def print_table(df, sample=None, check_column=None):
         print(df)
         print(df.info())
 
-def delete_unavailable_products(code, lst):
-    for i, _ in enumerate(code):
-        if i in lst:
-            del code[i]
-    return code
-
 
 def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
     products_list = entry#[:1000]
-
+    scraped_products = len(products_list)
 
     # Extract the unique sigma aldrich identifier for each product
     code = get_unique_code(products_list)
@@ -78,9 +49,9 @@ def main():
 
     # Build availability table
     df_prod, df_naproduct = get_available_products(products_list, code)
+    save_df_json(df_prod, 'sigma_aldrich_package')
     #print_table(df_prod, sample=20, check_column='special_remarks')
     #print_table(df_naproduct)
-    #print(f'''scraped data: {len(code)}, number of unique codes: {len(set(code))}, database unique codes: {len(df_prod.code.unique())}''')
 
 
     ## Get rid of unavailable products, update the unique codes to only those that are available
@@ -89,19 +60,22 @@ def main():
 
 
     # Get the smiles for RDkit conversion
-    print('smiles next')
-    df_smiles, df_smiles_error = get_smiles(products_list,code)
-    save_smiles_txt(df_smiles[['code', 'rdkit_smiles']], 'sigma_aldrich')
-    print_table(df_smiles, sample=20)
-    print_table(df_smiles_error)
-
-    print('Products list: ', len(products_list))
-    print('Smiles from sigma aldrich: ', len(df_smiles))
-    print('Missing smiles representation: ', len(products_list) - len(df_smiles))
-
+    #df_smiles, df_smiles_error = get_smiles(products_list,code)
+    #save_smiles_txt(df_smiles[['code', 'rdkit_smiles']], 'sigma_aldrich')
+    #print_table(df_smiles, sample=20)
+    #print_table(df_smiles_error)
 
     # get available attributes
     #get_attribute_list(products_list,code)
+
+    '''
+    print('Scraped compounds list: ', scraped_products)
+    print('Purchasable compounds list: ', len(products_list))
+    print('Available products to purchase: ', len(df_prod))
+    print('Smiles from sigma aldrich: ', len(df_smiles))
+    print('Missing smiles representation: ', len(products_list) - len(df_smiles))
+    '''
+
 
 if __name__ == "__main__":
     main()
