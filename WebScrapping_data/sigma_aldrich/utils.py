@@ -10,7 +10,6 @@ def delete_unavailable_products(code, lst):
             del code[i]
     return code
 
-
 def get_cansmi(smi):
     '''Input a Smiles String and tranform it to an RDKit'''
     try:
