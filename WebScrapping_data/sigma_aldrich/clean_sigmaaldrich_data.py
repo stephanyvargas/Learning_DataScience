@@ -3,16 +3,20 @@ from utils import get_available_products, get_unique_code
 from utils import get_smiles, save_smiles_txt
 from utils import delete_unavailable_products
 import json
+import re
 
 
-def get_attribute_list(lst,code):
-    attr_list = []
+def get_aliases_list(lst,code):
+    alias_df = pd.DataFrame()
     for i, compound in enumerate(lst):
-        for attribute in lst[i][code[i]]['attributes']:
-            if attribute['key'] not in attr_list:
-                attr_list.append(attribute['key'])
-            else: pass
-    return attr_list
+        for attribute in lst[i][code[i]]['aliases']:
+            if attribute['key'] == 'pubchem substance id':
+                rep = r'>(\d+)<'
+                value = re.findall(rep, attribute['value'])[0]
+                alias_df.loc[code[i], attribute['key']]=value
+            else:
+                alias_df.loc[code[i], attribute['key']]=attribute['value']
+    return alias_df
 
 
 def save_df_json(df, name, directory=None):
@@ -40,33 +44,37 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry#[:1000]
+    products_list = entry[:50]
     scraped_products = len(products_list)
 
     # Extract the unique sigma aldrich identifier for each product
     code = get_unique_code(products_list)
 
 
-    # Build availability table
+    '''Build availability table'''
     df_prod, df_naproduct = get_available_products(products_list, code)
-    save_df_json(df_prod, 'sigma_aldrich_package')
+    #save_df_json(df_prod, 'sigma_aldrich_package')
     #print_table(df_prod, sample=20, check_column='special_remarks')
-    #print_table(df_naproduct)
 
 
-    ## Get rid of unavailable products, update the unique codes to only those that are available
+    '''Get rid of unavailable products, update the unique codes to only those that are available'''
     code = delete_unavailable_products(code, df_naproduct.idx)
     products_list = delete_unavailable_products(products_list, df_naproduct.idx)
 
 
-    # Get the smiles for RDkit conversion
-    #df_smiles, df_smiles_error = get_smiles(products_list,code)
-    #save_smiles_txt(df_smiles[['code', 'rdkit_smiles']], 'sigma_aldrich')
+    '''Get the smiles for RDkit conversion'''
+    #df_smiles, df_smiles_error = get_smiles(products_list,code,save_output=False, name='sigma_aldrich')
     #print_table(df_smiles, sample=20)
-    #print_table(df_smiles_error)
 
-    # get available attributes
-    #get_attribute_list(products_list,code)
+
+    '''Get the compound identifications'''
+    print(get_aliases_list(products_list,code))
+
+
+    '''Get the listed attributes'''
+    #print(get_attribute_list(products_list,code))
+
+
 
     '''
     print('Scraped compounds list: ', scraped_products)
