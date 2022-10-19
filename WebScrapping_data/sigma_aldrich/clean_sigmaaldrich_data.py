@@ -16,7 +16,7 @@ def get_aliases_list(lst,code,save_output=False,name='name',directory=None):
                 alias_df.loc[code[i], attribute['key']]=value
             else:
                 alias_df.loc[code[i], attribute['key']]=attribute['value']
-    
+
     if save_output:
         save_df_json(alias_df, name)
     return alias_df
@@ -71,8 +71,9 @@ def main():
 
 
     '''Get the compound identifications'''
-    print(get_aliases_list(products_list,code))
-
+    df_compound_id = get_aliases_list(products_list,code)
+    print(df_compound_id)
+    print(df_compound_id.columns)
 
     '''Get the listed attributes'''
     #print(get_attribute_list(products_list,code))
