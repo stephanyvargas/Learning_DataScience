@@ -6,7 +6,7 @@ import json
 import re
 
 
-def get_aliases_list(lst,code):
+def get_aliases_list(lst,code,save_output=False,name='name',directory=None):
     alias_df = pd.DataFrame()
     for i, compound in enumerate(lst):
         for attribute in lst[i][code[i]]['aliases']:
@@ -16,6 +16,9 @@ def get_aliases_list(lst,code):
                 alias_df.loc[code[i], attribute['key']]=value
             else:
                 alias_df.loc[code[i], attribute['key']]=attribute['value']
+    
+    if save_output:
+        save_df_json(alias_df, name)
     return alias_df
 
 
@@ -44,7 +47,7 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry[:50]
+    products_list = entry#[:50]
     scraped_products = len(products_list)
 
     # Extract the unique sigma aldrich identifier for each product
