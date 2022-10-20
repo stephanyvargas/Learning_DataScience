@@ -66,7 +66,7 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
     ##executable_path is deprecated, need to change it eventually
     #Load the Chrome driver and open Chromium in the back.
     #A chrome tab will open and wait for the JavaScript to load.
-    wait = WebDriverWait(driver, 40)
+    wait = WebDriverWait(driver, 60)
     action = ActionChains(driver)
 
     try:
@@ -172,6 +172,9 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
             prod_var = values[var_a+0].split(' ')[0]
             product_details['ID - quatity'] = values[var_a+0]
             product_details['shipment'] = get_delivery_time(values, var_a)
+            if not get_delivery_time(values, var_a):
+                print(f'No delivery details could be scraped, check {url}')
+                return False
             if idx_values[n] == 3:
                 product_details['price'] = values[var_a+2].replace('￥', '')
             if idx_values[n] == 4:
@@ -208,15 +211,23 @@ def colect_data(product_url, proxy_entry, product_data={}, inspect_page=False):
 
 
 def get_delivery_time(values, var_a):
+    delivery=True
     try:
         #If there is concrete information about the delivery date, get how many days it will take to deliver
         CurrentDate = datetime.datetime.now()
         ExpectedDate = datetime.datetime.strptime(values[var_a+1].split(' ')[1], "%Y年%m月%d日")
         timedelta = ExpectedDate-CurrentDate
-        return str(abs(timedelta.days)) + ' day(s)'
+        delivery_time = str(abs(timedelta.days)) + ' day(s)'
+        return delivery_time
     except:
+        pass
+
+    if delivery:
         #If there is a message for the delivery instead of a date, save the message
-        return values[var_a+1]
+        try:
+            return values[var_a+1]
+        except:
+            return False
 
 
 def get_proxy():
@@ -237,7 +248,7 @@ proxy_list=get_proxy()
 
 with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
     urls_file = url_f.readlines()
-    for url_ in tqdm(urls_file[21:150]):
+    for url_ in tqdm(urls_file[25:500]):
         url = url_.replace('\n', '')
         data = colect_data(url,
                            proxy_entry=proxy_list[randint(0,len(proxy_list)-1)])
@@ -250,4 +261,4 @@ with open('sigmaaldrich_products_urls.txt', 'r') as url_f:
                 json.dump(entry, data_f, indent=4)
             entry.clear()
         dictionary = {}
-        time.sleep(randint(10,25))
+        time.sleep(randint(20,30))
