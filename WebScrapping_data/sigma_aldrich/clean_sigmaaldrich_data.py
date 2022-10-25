@@ -82,7 +82,7 @@ def main():
     '''Get the compound identifications table'''
     #print('Building the compound identifications table...')
     #df_compound_id = get_aliases_list(products_list,code)
-    #print(df_compound_id)
+    #print(df_compound_id)topic
     #save_df_json(df_compound_id, 'sigma_aldrich_compound_identification')
 
 
