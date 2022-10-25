@@ -14,7 +14,7 @@ def get_attributes(lst,code):
         for attribute in lst[i][code[i]]['attributes']:
             try:
                 if len(attribute['values']) > 1:
-                    attr = ', '.join(attribute['values'])
+                    attr = ', '.join(attribute['values']).replace(';','')
                     if ':' in attr:
                         attr_list = attr.split(',')
                         for element in attr_list:
@@ -26,7 +26,9 @@ def get_attributes(lst,code):
                 else:
                     attributes_df.loc[code[i], attribute['key']]=attribute['values']
             except ValueError:
-                print('Error : ',[code[i]],attribute['key'], attribute['values'])
+                print(f'element {i}, ValueError : ',[code[i]],attribute['key'], attribute['values'])
+            except IndexError:
+                print(f'element {i}, IndexError : ',[code[i]],attribute['key'], attribute['values'])
     return attributes_df
 
 
@@ -55,7 +57,7 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry[:50]
+    products_list = entry#[:50]
     scraped_products = len(products_list)
 
     # Extract the unique sigma aldrich identifier for each product
@@ -87,7 +89,7 @@ def main():
 
 
     '''Get the listed attributes'''
-    #print('Building the attributes table...')
+    print('Building the attributes table...')
     df_attributes = get_attributes(products_list,code)
     print(df_attributes)
     print(df_attributes.columns)
