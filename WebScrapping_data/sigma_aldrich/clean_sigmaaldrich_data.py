@@ -14,7 +14,7 @@ def get_attributes(lst,code):
         for attribute in lst[i][code[i]]['attributes']:
             try:
                 if len(attribute['values']) > 1:
-                    attr = ', '.join(attribute['values']).replace(';','')
+                    attr = ', '.join(attribute['values']).encode("utf8").decode("unicode-escape")
                     if ':' in attr:
                         attr_list = attr.split(',')
                         for element in attr_list:
