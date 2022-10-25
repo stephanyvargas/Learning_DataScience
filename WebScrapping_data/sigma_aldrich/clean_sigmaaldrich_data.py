@@ -9,13 +9,26 @@ import re
 
 
 def get_attributes(lst,code):
-    attributes = []
+    attributes_df = pd.DataFrame()
     for i, compound in enumerate(lst):
         for attribute in lst[i][code[i]]['attributes']:
-            print([code[i]], attribute)
-            attributes.append(attribute['key'])
-    return attributes
- 
+            try:
+                if len(attribute['values']) > 1:
+                    attr = ', '.join(attribute['values'])
+                    if ':' in attr:
+                        attr_list = attr.split(',')
+                        for element in attr_list:
+                            topic = re.findall(r'(.+):',element)[0].strip()
+                            value = re.findall(r':(.+)',element)[0].strip()
+                            attributes_df.loc[code[i], f'{attribute["key"]}.{topic}']=value
+                    else:
+                        attributes_df.loc[code[i], attribute['key']]=attr
+                else:
+                    attributes_df.loc[code[i], attribute['key']]=attribute['values']
+            except ValueError:
+                print('Error : ',[code[i]],attribute['key'], attribute['values'])
+    return attributes_df
+
 
 def save_df_json(df, name, directory=None):
     if directory == None:
@@ -74,8 +87,11 @@ def main():
 
 
     '''Get the listed attributes'''
-    print(set(get_attributes(products_list,code)))
-
+    #print('Building the attributes table...')
+    df_attributes = get_attributes(products_list,code)
+    print(df_attributes)
+    print(df_attributes.columns)
+    #save_df_json(df_attributes, 'sigma_aldrich_attributes')
 
 
     '''
