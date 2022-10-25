@@ -8,25 +8,14 @@ import json
 import re
 
 
-def get_aliases_list(lst,code):
-    alias_df = pd.DataFrame()
+def get_attributes(lst,code):
+    attributes = []
     for i, compound in enumerate(lst):
-        for attribute in lst[i][code[i]]['aliases']:
-            if attribute['key'] == 'pubchem substance id':
-                rep = r'>(\d+)<'
-                value = re.findall(rep, attribute['value'])[0]
-                alias_df.loc[code[i], attribute['key']]=value
-            else:
-                alias_df.loc[code[i], attribute['key']]=attribute['value']
-
-        res = r'CAS Number: (\d+-\d+-\d+)'
-        cas_num = re.findall(res, lst[i][code[i]]['Metadata'].get('description'))
-        if cas_num:
-            alias_df.loc[code[i], 'CAS']=cas_num[0]
-        alias_df.loc[code[i], 'name']=lst[i][code[i]].get('name')
-        alias_df.loc[code[i], 'ProductNumber']=lst[i][code[i]].get('id')
-    return alias_df.rename(columns=compounds_idx)
-
+        for attribute in lst[i][code[i]]['attributes']:
+            print([code[i]], attribute)
+            attributes.append(attribute['key'])
+    return attributes
+ 
 
 def save_df_json(df, name, directory=None):
     if directory == None:
@@ -53,7 +42,7 @@ def main():
     with open("data_sigmaaldrich.json", 'r+', encoding='utf8') as data_f:
         entry = json.load(data_f)
 
-    products_list = entry
+    products_list = entry[:50]
     scraped_products = len(products_list)
 
     # Extract the unique sigma aldrich identifier for each product
@@ -85,7 +74,8 @@ def main():
 
 
     '''Get the listed attributes'''
-    #print(get_attribute_list(products_list,code))
+    print(set(get_attributes(products_list,code)))
+
 
 
     '''
