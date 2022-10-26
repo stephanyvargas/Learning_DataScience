@@ -2,6 +2,7 @@ import pandas as pd
 from utils import get_available_products, get_unique_code
 from utils import get_smiles, save_smiles_txt
 from utils import delete_unavailable_products
+from bs4 import BeautifulSoup
 from column_name_match import *
 import time
 import json
@@ -14,7 +15,8 @@ def get_attributes(lst,code):
         for attribute in lst[i][code[i]]['attributes']:
             try:
                 if len(attribute['values']) > 1:
-                    attr = ', '.join(attribute['values']).encode("utf8").decode("unicode-escape")
+                    attr_html_encoded = ', '.join(attribute['values'])
+                    attr = BeautifulSoup(attr_html_encoded, "html.parser")
                     if ':' in attr:
                         attr_list = attr.split(',')
                         for element in attr_list:
