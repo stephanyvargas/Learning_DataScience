@@ -3,10 +3,20 @@
 
 # data
 .html
+.smi
+.xyz
+*/*.xyz
+*/*/*.xyz
+*/*.smi
 .sql
-.txt
-.csv 
-.json
+*/*.sql
+*.txt
+*/*.txt
+*.csv
+*/*.csv 
+*.json
+*/*.json
+*/*/*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
